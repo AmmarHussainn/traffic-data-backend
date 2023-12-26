@@ -1,24 +1,19 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
-const fetch = require('node-fetch');
-
-const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const MyModel = require('./Schema/signup');
-var salt = bcrypt.genSaltSync(10);
-var hash = bcrypt.hashSync("B4c0/\/", salt);
 const app = express();
-const bodyParser = require('body-parser');
 const ReceivedData = require('./Schema/signup');
-
+const userRoutes = require('./routes/userRoutes'); // Import your user routes.
 const port = process.env.PORT || 8080;
-const secretKey = 'eyJhbGciOiJIUzM4NCIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.bQTnz6AuMJvmXXQsVPrxeQNvzDkimo7VNXxHeSBfClLufmCVZRUuyTwJF311JHuheyJhbGciOiJIUzM4NCIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.bQTnz6AuMJvmXXQsVPrxeQNvzDkimo7VNXxHeSBfClLufmCVZRUuyTwJF311JHuh';
 const mongoURI =
-  process.env.MONGODB_URI ||
-  'mongodb+srv://ammarhussain0315:1234@cluster0.um7zey5.mongodb.net/?retryWrites=true&w=majority';
- 
-app.use(express.json());
+//  process.env.MONGODB_URI ||
+ // 'mongodb+srv://ammarhussain0315:1234@cluster0.um7zey5.mongodb.net/?retryWrites=true&w=majority';
+// ' mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/'
+'mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/?retryWrites=true&w=majority'
+const bodyParser = require('body-parser');
+
+app.use(bodyParser.json());
 app.use(cors());
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -26,7 +21,6 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   next();
 });
-app.use(bodyParser.json());
 
 // app.get('/ipapi', async (req, res) => {
 //   try {
@@ -116,8 +110,7 @@ app.use(bodyParser.json());
 //     if (!user) {
 //       return res.status(401).json({ message: 'Invalid email or password' });
 //     }
-    
-    
+
 //     const passwordMatch = bcrypt.compareSync(req.body.password, user.password);
 //    console.log('passwordMatch:', passwordMatch);
 
@@ -162,6 +155,8 @@ app.use((req, res, next) => {
   next();
 });
 
+// Use your user routes
+app.use('/users', userRoutes);
 // Route for tracking user activity
 // const endTime = new Date();
 // const timeSpent = endTime - req.startTime;
@@ -174,7 +169,7 @@ app.use((req, res, next) => {
 // app.post('/pixeltrack', (req, res) => {
 //   const receivedData = req.body;
 //   console.log('receivedData',receivedData);
- 
+
 //   // try {
 //   //   console.log('req.body:', req.body);
 //   //   console.log('req.data:', req.params);
@@ -183,7 +178,7 @@ app.use((req, res, next) => {
 //   //   console.error('Error in pixeltrack route:', error);
 //   //   res.status(500).json({ error: 'Internal Server Error' });
 //   // }
-  
+
 // });
 
 app.post('/pixeltrack', async (req, res) => {
@@ -194,7 +189,7 @@ app.post('/pixeltrack', async (req, res) => {
     // Save the received data to MongoDB
     const savedData = await ReceivedData.create(receivedData);
     console.log('Data saved to MongoDB:', savedData);
-    
+
     res.status(200).json({ message: 'Success' });
   } catch (error) {
     console.error('Error in pixeltrack route:', error);
@@ -202,14 +197,13 @@ app.post('/pixeltrack', async (req, res) => {
   }
 });
 
- app.get('/userDetals', async (req, res) => {
-
-  const  UserId  = await ReceivedData.find({ userId:'Sp8732yibdisecialId' });
-  if(UserId){
+app.get('/userDetals', async (req, res) => {
+  const UserId = await ReceivedData.find({ userId: 'Sp8732yibdisecialId' });
+  if (UserId) {
     return res.status(200).json({ success: true, data: UserId });
   }
   console.log('UserId:', UserId);
- });
+});
 const run = async () => {
   try {
     await mongoose.connect(mongoURI);
@@ -223,4 +217,3 @@ const run = async () => {
 };
 
 run();
-
