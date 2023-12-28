@@ -26,7 +26,6 @@ const verifyPass = (pass, passHash) => {
 };
 
 async function registerUser(req, res) {
-  try {
     const { email, businessName, password } = req.body;
 
     // Validate input
@@ -61,12 +60,6 @@ async function registerUser(req, res) {
       data: userData,
       token: token,
     });
-  } catch (error) {
-    console.error(error);
-    return res
-      .status(500)
-      .json({ message: 'Registration failed. Please try again later.' });
-  }
 }
 
 async function loginUser(req, res) {
