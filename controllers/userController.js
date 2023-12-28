@@ -1,95 +1,78 @@
-const bcrypt = require('bcrypt');
-
 const jwt = require('jsonwebtoken');
-const User = require('../Schema/user'); // Import the User model
-// Import the Login model
-const Login = require('../Schema/loginSchema');
+const User = require('../Schema/user');
+const bcrypt = require('bcrypt');
 require('dotenv').config();
 
-// Function to handle user registration and email verification
+const saltRounds = 10; // You can adjust this value based on your security requirements
+
 async function registerUser(req, res) {
   try {
-    console.log('req.body', req.body);
     const { email, businessName, password } = req.body;
-    // Input validation
+
     if (!email || !password) {
-      return res.status(400).send({ message: 'Email, password are required.' });
+      return res.status(400).send({ message: 'Email and password are required.' });
     }
 
-  
-    // Check if the user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).send({ message: 'User with this email already exists.' });
     }
-  
 
-    // Create a new user
-      const user = new User({
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    const user = new User({
       email: email,
       businessName: businessName,
-      password: password,
-      isVerified: true, // Since email verification is skipped, set to true
-    });
-    console.log(user , 'user');
-    // Hash the user's password
-    user.password = await bcrypt.hash(password, 10);
-
-    // Save the user to the database
-    const userData = await user.save(user);
-    console.log('userData', userData);
-    const token = jwt.sign({ userId: userData._id }, 'your-secret-key', {
-      expiresIn: '1h', // Token expiration time
+      password: hashedPassword,
+      isVerified: true,
     });
 
-    return res.status(201).json({ message: 'User registered successfully.',data : userData , token: token});
+    const userData = await user.save();
+    const token = jwt.sign({ userId: userData._id }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+
+    return res.status(201).json({ message: 'User registered successfully.', data: userData, token: token });
   } catch (error) {
-    console.error(error); // Log the error for debugging
-    return res
-      .status(500)
-      .json({ message: 'Registration failed. Please try again later.' });
+    console.error(error);
+    return res.status(500).json({ message: 'Registration failed. Please try again later.' });
   }
 }
 
-// Function to handle user login
 async function loginUser(req, res) {
   try {
     const { email, password } = req.body;
 
-    // Input validation
+    // Validate input
     if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: 'Email and password are required.' });
+      return res.status(400).json({ message: 'Email and password are required.' });
     }
 
-    // Find the user in the database
+    // Find user in the database
     const user = await User.findOne({ email });
 
-    // If the user does not exist, return an error
+    // Check if user exists and password matches
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
-    // Compare the entered password with the hashed password in the database
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
 
-    if (!passwordMatch) {
+    if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
-    // If the password is correct, create a JWT token
-    const token = jwt.sign({ userId: user._id }, 'your-secret-key', {
-      expiresIn: '1h', // Token expiration time
+    // Generate a JSON Web Token (JWT)
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
     });
 
-    // Return the token
-    return res.json({ token: token, data: user });
+    // Send successful response with user data and token
+    return res.json({ message: 'Login successful.', data: user._id, token: token });
   } catch (error) {
-    console.error(error); // Log the error for debugging
-    return res
-      .status(500)
-      .json({ message: 'Login failed. Please try again later.' });
+    console.error(error);
+    return res.status(500).json({ message: 'Login failed. Please try again later.' });
   }
 }
 
@@ -97,12 +80,3 @@ module.exports = {
   registerUser,
   loginUser,
 };
-
-
-
-
-
-
-
-
-
