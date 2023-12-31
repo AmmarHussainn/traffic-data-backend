@@ -12,7 +12,7 @@ const mongoURI =
 // ' mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/'
 'mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/?retryWrites=true&w=majority'
 const bodyParser = require('body-parser');
-
+const stripe = require('stripe')('sk_test_51OSccqJ7ffyJlYAYkKUQKNXIZwdMJYK9xLJZ2AWNMQSUPprAlORUfeztKC7Of9UoiD76sw4ptWAPtmWBnDEuAUFH00Nu2zJJdg');
 app.use(bodyParser.json());
 app.use(cors());
 app.use((req, res, next) => {
@@ -203,6 +203,26 @@ app.get('/userDetals', async (req, res) => {
     return res.status(200).json({ success: true, data: UserId });
   }
   console.log('UserId:', UserId);
+});
+
+app.post('/webhook', async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, 'whsec_5f330fe8069619ff806a8aa3bf7d244e48ec321bda1519fa770aab27e29764d0');
+  } catch (err) {
+    console.error('Webhook error:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    // Now you can update your database or take any other necessary actions
+    console.log('Payment succeeded:', session);
+  }
+
+  res.json({ received: true });
 });
 const run = async () => {
   try {
