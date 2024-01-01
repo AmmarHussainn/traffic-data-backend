@@ -205,24 +205,58 @@ app.get('/userDetals', async (req, res) => {
   console.log('UserId:', UserId);
 });
 
-app.post('/webhook', async (req, res) => {
-  const sig = req.headers['stripe-signature'];
+// app.post('/webhook', async (req, res) => {
+//   const sig = req.headers['stripe-signature'];
+//   let event;
+//   try {
+//     event = stripe.webhooks.constructEvent(req.rawBody, sig, 'whsec_5f330fe8069619ff806a8aa3bf7d244e48ec321bda1519fa770aab27e29764d0');
+//   } catch (err) {
+//     console.error('Webhook error:', err.message);
+//     return res.status(400).send(`Webhook Error: ${err.message}`);
+//   }
+
+//   // Handle the event
+//   if (event.type === 'checkout.session.completed') {
+//     const session = event.data.object;
+//     // Now you can update your database or take any other necessary actions
+//     console.log('Payment succeeded:', session);
+//   }
+
+//   res.json({ received: true });
+// });
+
+
+app.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
+  const sig = request.headers['stripe-signature'];
+
   let event;
+
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, 'whsec_5f330fe8069619ff806a8aa3bf7d244e48ec321bda1519fa770aab27e29764d0');
+    event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
   } catch (err) {
-    console.error('Webhook error:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    response.status(400).send(`Webhook Error: ${err.message}`);
+    return;
   }
 
   // Handle the event
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    // Now you can update your database or take any other necessary actions
-    console.log('Payment succeeded:', session);
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      const paymentIntentSucceeded = event.data.object;
+      console.log('PaymentIntent was successful!');
+      // Then define and call a function to handle the event payment_intent.succeeded
+      break;
+    case 'payment_intent.payment_failed':
+      const paymentIntentFailed = event.data.object;
+      console.log('PaymentIntent failed:', paymentIntentFailed);
+      // Then define and call a function to handle the event payment_intent.payment_failed
+      break;
+    // ... handle other event types
+    default:
+      console.log(`Unhandled event type ${event.type}`);
   }
 
-  res.json({ received: true });
+  // Return a 200 response to acknowledge receipt of the event
+  response.send();
 });
 const run = async () => {
   try {

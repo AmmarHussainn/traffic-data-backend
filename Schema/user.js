@@ -3,10 +3,17 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
 const userSchema = new mongoose.Schema({
-  email: { type: String, required: true    },
+  _id: {
+    type: String, // Using String type for _id
+    default: () => new  mongoose.Types.ObjectId().toString(), // Generating default ObjectId as a string
+  },
+  email: { type: String, required: true },
   businessName: { type: String, required: true },
   password: { type: String, required: true },
   isVerified: { type: Boolean, default: false },
+  isSubscribed: { type: Boolean, default: false },
+  freeTrialAvailed: { type: Boolean, default: false },
+  freetrialCreated: { type: Date  },
 });
 
 // Hash the user's password before saving to the database

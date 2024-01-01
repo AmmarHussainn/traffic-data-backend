@@ -7,6 +7,7 @@ router.post('/register', userController.registerUser);
 
 // // Route for user login
 router.post('/login', userController.loginUser);
+router.post('/updateUser', userController.updateUser);
 
 // // Route for email verification (using OTP)
 // router.post('/verify', userController.verifyEmail);

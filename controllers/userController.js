@@ -26,40 +26,42 @@ const verifyPass = (pass, passHash) => {
 };
 
 async function registerUser(req, res) {
-    const { email, businessName, password } = req.body;
+  const { email, businessName, password } = req.body;
 
-    // Validate input
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: 'Email and password are required.' });
-    }
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res
-        .status(400)
-        .json({ message: 'User with this email already exists.' });
-    }
+  // Validate input
+  if (!email || !password) {
+    return res
+      .status(400)
+      .json({ message: 'Email and password are required.' });
+  }
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return res
+      .status(400)
+      .json({ message: 'User with this email already exists.' });
+  }
 
-    let newPass = generatePassHash(password);
-    console.log('pass', password, newPass);
-    const user = new User({
-      email: email,
-      businessName: businessName,
-      password: newPass,
-      isVerified: true, // Change this to false if you implement email confirmation
-    });
-    console.log('user', user);
-    const userData = await user.save();
-    const token = jwt.sign({ userId: userData._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
+  let newPass = generatePassHash(password);
+  console.log('pass', password, newPass);
+  const user = new User({
+    email: email,
+    businessName: businessName,
+    password: newPass,
+    isVerified: true,
+    freeTrialAvailed: false,
+    isSubscribed: false,
+  });
+  console.log('user', user);
+  const userData = await user.save();
+  const token = jwt.sign({ userId: userData._id }, process.env.JWT_SECRET, {
+    expiresIn: '1h',
+  });
 
-    return res.status(201).json({
-      message: 'User registered successfully.',
-      data: userData,
-      token: token,
-    });
+  return res.status(201).json({
+    message: 'User registered successfully.',
+    data: userData,
+    token: token,
+  });
 }
 
 async function loginUser(req, res) {
@@ -77,23 +79,25 @@ async function loginUser(req, res) {
         console.log('User not found');
         return res.status(401).json({ message: 'Invalid email or password.' });
       }
-
-      console.log(
-        'Password comparison result:',
-        verifyPass(password, user.password)
-      );
       if (!verifyPass(password, user.password)) {
         return res.status(401).json({ message: 'Invalid  password.' });
       }
-
-      // Passwords match, generate token
       const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
         expiresIn: '1h',
       });
 
+      if (user && user.freetrialCreated) {
+        let date = new Date(user.freetrialCreated).valueOf() + 604800000;
+        if (new Date().valueOf() > date) {
+          user.isSubscribed = false;
+          user.freetrialCreated = '';
+          await User.findByIdAndUpdate(user._id, { ...user });
+        }
+      }
+
       return res.json({
         message: 'Login successful.',
-        data: user._id,
+        data: user,
         token: token,
       });
     } catch (userError) {
@@ -110,7 +114,89 @@ async function loginUser(req, res) {
   }
 }
 
+// async function updateUser(req, res) {
+//   let data = req.body;
+//   console.log('data', data);
+//   const user = await User.findOne({ _id: data.userId });
+//   console.log('user', user);
+
+//   if (user) {
+//     console.log('user', user);
+//     let newData = {
+//       ...user,
+//       isSubscribed: true,
+//       freeTrialAvailed: true,
+//       freetrialCreated: new Date(),
+//     };
+//     console.log('newData', newData);
+//     let updatedUser = await User.findByIdAndUpdate(data.userId, {
+//       ...user,
+//       isSubscribed: true,
+//       freeTrialAvailed: true,
+//       freetrialCreated: new Date(),
+//     });
+//     console.log('newData', newData);
+
+//     if (updatedUser) {
+//       console.log('updatedUser', updatedUser);
+//       return res.status(201).json({
+//         message: 'User updated successfully.',
+//         data: updatedUser,
+//         success: true,
+//       });
+//     } else {
+//       return res.status(201).json({
+//         message: 'User updated failed.',
+//         data: updatedUser,
+//         success: false,
+//       });
+//     }
+//   }
+// }
+async function updateUser(req, res) {
+  let data = req.body;
+  console.log('data', data);
+  
+  const user = await User.findOne({ _id: data.userId });
+  console.log('user', user);
+
+  if (user) {
+    let newData = {
+      ...user.toObject(), // Convert Mongoose document to plain object
+      isSubscribed: true,
+      freeTrialAvailed: true,
+      freetrialCreated: new Date(),
+    };
+
+    console.log('newData', newData);
+
+    try {
+      let updatedUser = await User.findByIdAndUpdate(data.userId, newData, { new: true });
+
+      console.log('updatedUser', updatedUser);
+
+      return res.status(201).json({
+        message: 'User updated successfully.',
+        data: updatedUser,
+        success: true,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: 'User update failed.',
+        error: error.message,
+        success: false,
+      });
+    }
+  } else {
+    return res.status(404).json({
+      message: 'User not found.',
+      success: false,
+    });
+  }
+}
+
 module.exports = {
   registerUser,
   loginUser,
+  updateUser,
 };
