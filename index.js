@@ -7,12 +7,14 @@ const ReceivedData = require('./Schema/signup');
 const userRoutes = require('./routes/userRoutes'); // Import your user routes.
 const port = process.env.PORT || 8080;
 const mongoURI =
-//  process.env.MONGODB_URI ||
- // 'mongodb+srv://ammarhussain0315:1234@cluster0.um7zey5.mongodb.net/?retryWrites=true&w=majority';
-// ' mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/'
-'mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/?retryWrites=true&w=majority'
+  //  process.env.MONGODB_URI ||
+  // 'mongodb+srv://ammarhussain0315:1234@cluster0.um7zey5.mongodb.net/?retryWrites=true&w=majority';
+  // ' mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/'
+  'mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/?retryWrites=true&w=majority';
 const bodyParser = require('body-parser');
-const stripe = require('stripe')('sk_test_51OSccqJ7ffyJlYAYkKUQKNXIZwdMJYK9xLJZ2AWNMQSUPprAlORUfeztKC7Of9UoiD76sw4ptWAPtmWBnDEuAUFH00Nu2zJJdg');
+const stripe = require('stripe')(
+  'sk_test_51OSccqJ7ffyJlYAYkKUQKNXIZwdMJYK9xLJZ2AWNMQSUPprAlORUfeztKC7Of9UoiD76sw4ptWAPtmWBnDEuAUFH00Nu2zJJdg'
+);
 app.use(bodyParser.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
@@ -200,10 +202,25 @@ app.post('/pixeltrack', async (req, res) => {
 
 app.get('/userDetals', async (req, res) => {
   const userId = req.query.userId;
-  console.log('UserID:', userId); 
+  console.log('UserID:', userId);
   const UserId = await ReceivedData.find({ userId: `${userId}` });
   if (UserId) {
     return res.status(200).json({ success: true, data: UserId });
+  }
+  console.log('UserId:', UserId);
+});
+
+app.get('/installationCheck', async (req, res) => {
+  const domain = req.query.domain;
+  console.log('domain',domain)
+  const UserId = await ReceivedData.find({
+    domain: { $regex: new RegExp(domain, 'i') },
+  });
+  console.log('UserId:', UserId);
+  if (UserId.length) {
+    return res.status(200).json({ success: true, data: UserId });
+  }else{
+    return res.status(200).json({ success: false, data: UserId });
   }
   console.log('UserId:', UserId);
 });
@@ -228,39 +245,42 @@ app.get('/userDetals', async (req, res) => {
 //   res.json({ received: true });
 // });
 
+app.post(
+  '/webhook',
+  express.raw({ type: 'application/json' }),
+  (request, response) => {
+    const sig = request.headers['stripe-signature'];
 
-app.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
-  const sig = request.headers['stripe-signature'];
+    let event;
 
-  let event;
+    try {
+      event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+    } catch (err) {
+      response.status(400).send(`Webhook Error: ${err.message}`);
+      return;
+    }
 
-  try {
-    event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
-  } catch (err) {
-    response.status(400).send(`Webhook Error: ${err.message}`);
-    return;
+    // Handle the event
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        const paymentIntentSucceeded = event.data.object;
+        console.log('PaymentIntent was successful!');
+        // Then define and call a function to handle the event payment_intent.succeeded
+        break;
+      case 'payment_intent.payment_failed':
+        const paymentIntentFailed = event.data.object;
+        console.log('PaymentIntent failed:', paymentIntentFailed);
+        // Then define and call a function to handle the event payment_intent.payment_failed
+        break;
+      // ... handle other event types
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    // Return a 200 response to acknowledge receipt of the event
+    response.send();
   }
-
-  // Handle the event
-  switch (event.type) {
-    case 'payment_intent.succeeded':
-      const paymentIntentSucceeded = event.data.object;
-      console.log('PaymentIntent was successful!');
-      // Then define and call a function to handle the event payment_intent.succeeded
-      break;
-    case 'payment_intent.payment_failed':
-      const paymentIntentFailed = event.data.object;
-      console.log('PaymentIntent failed:', paymentIntentFailed);
-      // Then define and call a function to handle the event payment_intent.payment_failed
-      break;
-    // ... handle other event types
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
-
-  // Return a 200 response to acknowledge receipt of the event
-  response.send();
-});
+);
 const run = async () => {
   try {
     await mongoose.connect(mongoURI);
