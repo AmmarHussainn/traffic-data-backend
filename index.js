@@ -15,6 +15,7 @@ const bodyParser = require('body-parser');
 const stripe = require('stripe')('sk_test_51OSccqJ7ffyJlYAYkKUQKNXIZwdMJYK9xLJZ2AWNMQSUPprAlORUfeztKC7Of9UoiD76sw4ptWAPtmWBnDEuAUFH00Nu2zJJdg');
 app.use(bodyParser.json());
 app.use(cors());
+app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
@@ -198,7 +199,9 @@ app.post('/pixeltrack', async (req, res) => {
 });
 
 app.get('/userDetals', async (req, res) => {
-  const UserId = await ReceivedData.find({ userId: 'Sp8732yibdisecialId' });
+  const userId = req.query.userId;
+  console.log('UserID:', userId); 
+  const UserId = await ReceivedData.find({ userId: `${userId}` });
   if (UserId) {
     return res.status(200).json({ success: true, data: UserId });
   }
