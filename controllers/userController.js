@@ -12,7 +12,7 @@ const Shields = {
   PRIVATE_KEY:
     '118188eadccb71345738a3b3ad19161e43468959f0635ac0ca3e3c0b1c3c55b8',
 };
-
+const JWT_SECRET  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
 const generatePassHash = (password) => {
   return crypto
     .pbkdf2Sync(password, Shields.SALT, 1000, 64, 'sha512')
@@ -53,7 +53,7 @@ async function registerUser(req, res) {
   });
   console.log('user', user);
   const userData = await user.save();
-  const token = jwt.sign({ userId: userData._id }, process.env.JWT_SECRET, {
+  const token = jwt.sign({ userId: userData._id }, JWT_SECRET, {
     expiresIn: '1h',
   });
 
@@ -82,7 +82,7 @@ async function loginUser(req, res) {
       if (!verifyPass(password, user.password)) {
         return res.status(401).json({ message: 'Invalid  password.' });
       }
-      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      const token = jwt.sign({ userId: user._id }, JWT_SECRET, {
         expiresIn: '1h',
       });
 
