@@ -2,6 +2,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../Schema/user');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+
 require('dotenv').config();
 
 const Shields = {
@@ -12,22 +14,36 @@ const Shields = {
   PRIVATE_KEY:
     '118188eadccb71345738a3b3ad19161e43468959f0635ac0ca3e3c0b1c3c55b8',
 };
-const JWT_SECRET  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+const JWT_SECRET =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
 const generatePassHash = (password) => {
   return crypto
     .pbkdf2Sync(password, Shields.SALT, 1000, 64, 'sha512')
     .toString('hex');
 };
 const verifyPass = (pass, passHash) => {
-  console.log('pass', pass, generatePassHash(pass));
-
-  const result = bcrypt.compareSync(generatePassHash(pass), passHash);
+  console.log('pass', pass);
+  console.log('passHash', passHash);
+  const result = generatePassHash(pass) == passHash ? true : false;
+  console.log('result', result);
   return result;
 };
+function generateRandomPassword() {
+  const length = 8;
+  const characters =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    password += characters.charAt(randomIndex);
+  }
+
+  return password;
+}
 
 async function registerUser(req, res) {
   const { email, businessName, password } = req.body;
-
   // Validate input
   if (!email || !password) {
     return res
@@ -79,6 +95,7 @@ async function loginUser(req, res) {
         console.log('User not found');
         return res.status(401).json({ message: 'Invalid email or password.' });
       }
+      console.log('user1', user);
       if (!verifyPass(password, user.password)) {
         return res.status(401).json({ message: 'Invalid  password.' });
       }
@@ -114,64 +131,35 @@ async function loginUser(req, res) {
   }
 }
 
-// async function updateUser(req, res) {
-//   let data = req.body;
-//   console.log('data', data);
-//   const user = await User.findOne({ _id: data.userId });
-//   console.log('user', user);
-
-//   if (user) {
-//     console.log('user', user);
-//     let newData = {
-//       ...user,
-//       isSubscribed: true,
-//       freeTrialAvailed: true,
-//       freetrialCreated: new Date(),
-//     };
-//     console.log('newData', newData);
-//     let updatedUser = await User.findByIdAndUpdate(data.userId, {
-//       ...user,
-//       isSubscribed: true,
-//       freeTrialAvailed: true,
-//       freetrialCreated: new Date(),
-//     });
-//     console.log('newData', newData);
-
-//     if (updatedUser) {
-//       console.log('updatedUser', updatedUser);
-//       return res.status(201).json({
-//         message: 'User updated successfully.',
-//         data: updatedUser,
-//         success: true,
-//       });
-//     } else {
-//       return res.status(201).json({
-//         message: 'User updated failed.',
-//         data: updatedUser,
-//         success: false,
-//       });
-//     }
-//   }
-// }
 async function updateUser(req, res) {
   let data = req.body;
   console.log('data', data);
-  
+
   const user = await User.findOne({ _id: data.userId });
   console.log('user', user);
 
   if (user) {
+    const timeInSeconds = Date.now();
+    const sevenDaysInMilliseconds = 7 * 24 * 60 * 60 * 1000;
+    const newTimeInMilliseconds = timeInSeconds + sevenDaysInMilliseconds;
+
     let newData = {
       ...user.toObject(), // Convert Mongoose document to plain object
-      isSubscribed: true,
+      subscription: {
+        amount: 0,
+        created_at: Date.now(),
+        expires_at: newTimeInMilliseconds,
+        id: 'FreeTrial',
+        invoice: 'FreeTrial',
+        payment_status: 'paid',
+      },
       freeTrialAvailed: true,
-      freetrialCreated: new Date(),
     };
 
-    console.log('newData', newData);
-
     try {
-      let updatedUser = await User.findByIdAndUpdate(data.userId, newData, { new: true });
+      let updatedUser = await User.findByIdAndUpdate(data.userId, newData, {
+        new: true,
+      });
 
       console.log('updatedUser', updatedUser);
 
@@ -195,8 +183,71 @@ async function updateUser(req, res) {
   }
 }
 
+async function forgetPassword(req, res) {
+  let data = req.body;
+  let nPass = generateRandomPassword();
+  let newPassword = generatePassHash(nPass);
+  if (!data.email) {
+    return res.status(400).json({ message: 'Email is required.' });
+  }
+
+  const user = await User.find({ email: data.email });
+  console.log('user', user);
+  if (user.length > 0) {
+    let newData = {
+      ...user._doc,
+      password: newPassword,
+    };
+    let updatedUser = await User.findByIdAndUpdate(user[0]._id, newData, {
+      new: true,
+    });
+
+    console.log('newPassword', nPass);
+    sendEmail(data.email, 'new password', nPass);
+    return res.status(200).json({
+      message: 'User updated successfully.',
+      success: true,
+      updatedUser: updatedUser,
+    });
+  } else {
+    return res.status(404).json({
+      message: 'User not found.',
+      success: false,
+    });
+  }
+}
+
+function sendEmail(to, subject, text) {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'ammarhussain0315@gmail.com',
+      pass: 'uavs xvjy ehpk jpii',
+    },
+  });
+
+  const mailOptions = {
+    from: 'ammarhussain0315@gmail.com',
+    to,
+    subject,
+    html: `<div style="text-align: center;">
+    <h1>Your New Password is:</h1>
+    <p>${text}</p>
+  </div>`,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error(error);
+    } else {
+      console.log('Email sent: ' + info.response);
+    }
+  });
+}
+
 module.exports = {
   registerUser,
   loginUser,
   updateUser,
+  forgetPassword,
 };
