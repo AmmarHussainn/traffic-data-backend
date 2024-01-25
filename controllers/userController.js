@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const User = require('../Schema/user');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const { log } = require('console');
 
 require('dotenv').config();
 
@@ -41,16 +42,18 @@ function generateRandomPassword() {
 
   return password;
 }
-
 async function registerUser(req, res) {
-  const { email, businessName, password } = req.body;
+  const { email, websiteName, password, firstName, lastName } = req.body;
+
   // Validate input
   if (!email || !password) {
     return res
       .status(400)
       .json({ message: 'Email and password are required.' });
   }
+
   const existingUser = await User.findOne({ email });
+
   if (existingUser) {
     return res
       .status(400)
@@ -58,16 +61,18 @@ async function registerUser(req, res) {
   }
 
   let newPass = generatePassHash(password);
-  console.log('pass', password, newPass);
+
   const user = new User({
     email: email,
-    businessName: businessName,
+    websiteName: websiteName, // Change from businessName to websiteName
+    firstName: firstName, // New field
+    lastName: lastName, // New field
     password: newPass,
-    isVerified: true,
     freeTrialAvailed: false,
-    isSubscribed: false,
+    freetrialCreated: null, // Assuming freetrialCreated is a date field
+    subscription: null, // Assuming subscription is an object field
   });
-  console.log('user', user);
+
   const userData = await user.save();
   const token = jwt.sign({ userId: userData._id }, JWT_SECRET, {
     expiresIn: '1h',
@@ -79,7 +84,6 @@ async function registerUser(req, res) {
     token: token,
   });
 }
-
 async function loginUser(req, res) {
   try {
     const { email, password } = req.body;
@@ -245,9 +249,59 @@ function sendEmail(to, subject, text) {
   });
 }
 
+async function UpdateUserPersonalDetails(req, res) {
+  try {
+    const data = req.body;
+    console.log('data', data);
+
+    const user = await User.findOne({ _id: data.userId });
+    console.log('user', user);
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found.',
+        success: false,
+      });
+    }
+   
+    if (user.email !== data.email) {
+      const checkEmail = await User.findOne({ email: data.email });
+     console.log('checkEmail', checkEmail);
+      if (checkEmail) {
+        return res.status(400).json({ message: 'Email already exists.' });
+      }
+    }
+
+    user.firstName = data.firstName;
+    user.lastName = data.lastName;
+    user.phoneNumber = data.phoneNumber;
+    user.email = data.email;
+
+    // Handle password updates if needed
+    // user.password = hashedPassword;
+
+    const updatedUser = await user.save();
+
+    console.log('updatedUser', updatedUser);
+
+    return res.status(201).json({
+      message: 'User updated successfully.',
+      data: updatedUser,
+      success: true,
+    });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return res.status(500).json({
+      message: 'User update failed.',
+      error: error.message,
+      success: false,
+    });
+  }
+}
+
 module.exports = {
   registerUser,
   loginUser,
   updateUser,
   forgetPassword,
+  UpdateUserPersonalDetails
 };

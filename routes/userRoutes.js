@@ -9,6 +9,7 @@ router.post('/register', userController.registerUser);
 router.post('/login', userController.loginUser);
 router.post('/updateUser', userController.updateUser);
 router.post('/forgetPassword', userController.forgetPassword);
+router.post('/UpdateUserPersonalDetails', userController.UpdateUserPersonalDetails);
 
 // // Route for email verification (using OTP)
 // router.post('/verify', userController.verifyEmail);

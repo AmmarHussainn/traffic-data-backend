@@ -186,3 +186,8 @@ app.post(
     }
   }
 );
+
+
+// app.post( '/create-checkout-session', async (req, res) => {
+//   let ips = req.body.ip;//['192.168.100', '192.168.101'];
+// });
