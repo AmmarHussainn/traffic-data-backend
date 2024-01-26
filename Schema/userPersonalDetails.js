@@ -2,20 +2,22 @@ const mongoose = require('mongoose');
 
 const addressSchema = new mongoose.Schema({
     street: {
-        street_name: { type: String },
-        street_suffix: { type: String },
-        pre_directional: { type: String },
-        post_directional: { type: String },
+        type: Object,
     },
+    // street: {
+    //     street_name: { type: String },
+    //     street_suffix: { type: String },
+    //     pre_directional: { type: String },
+    //     post_directional: { type: String },
+    // },
     unit: {
-        unit_designator: { type: String },
-        unit_number: { type: Number, default: null },
+        type : Object,
     },
     city: { type: String },
     state: { type: String },
+
     zip: {
-        zip_5: { type: Number },
-        zip_4: { type: Number },
+        type: Object,    
     },
 });
 
