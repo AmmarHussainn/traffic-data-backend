@@ -14,6 +14,7 @@ const mongoURI =
   'mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/?retryWrites=true&w=majority';
 const bodyParser = require('body-parser');
 const User = require('./Schema/user');
+const UserData = require('./Schema/userPersonalDetails');
 const stripe = require('stripe')(
   'sk_test_51OSccqJ7ffyJlYAYkKUQKNXIZwdMJYK9xLJZ2AWNMQSUPprAlORUfeztKC7Of9UoiD76sw4ptWAPtmWBnDEuAUFH00Nu2zJJdg'
 );
@@ -187,7 +188,13 @@ app.post(
   }
 );
 
-
-// app.post( '/create-checkout-session', async (req, res) => {
-//   let ips = req.body.ip;//['192.168.100', '192.168.101'];
-// });
+app.post('/api/store-data', async (req, res) => {
+  try {
+    const newData = new UserData(req.body);
+    await newData.save();
+    res.status(201).json({ message: 'Data stored successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
