@@ -7,6 +7,7 @@ const ReceivedData = require('./Schema/signup');
 const userRoutes = require('./routes/userRoutes');
 const UserActivity = require('./Schema/userActivity');
 const port = process.env.PORT || 8080;
+
 const mongoURI =
   //  process.env.MONGODB_URI ||
   // 'mongodb+srv://ammarhussain0315:1234@cluster0.um7zey5.mongodb.net/?retryWrites=true&w=majority';
@@ -51,42 +52,43 @@ app.use('/users', userRoutes);
 
 app.post('/pixeltrack', async (req, res) => {
   const receivedData = req.body;
-  const user = await User.findById(receivedData.userId);
+  // const user = await User.findById(receivedData.userId);
+  ReceivedData.create(receivedData);
 
-  if (user && user?.subscription.expires_at > Date.now()) {
-       ReceivedData.find({
-        userId: `${receivedData.userId}`,
-        firstTime: {
-          $gte: Number(user.subscription.created_at),
-        },
-      }).then((data) => {
-        let uniqueKeys = [];
-        data.forEach((data) => {
-          if (!uniqueKeys.includes(data.usercode)) {
-            uniqueKeys.push(data.usercode);
-          }
-        });
-        if (user.subscription.amount === 0) {
-          ReceivedData.create(receivedData);
-        } else if (
-          user.subscription.amount == 39900 &&
-          uniqueKeys.length <= 2000
-        ) {
-          ReceivedData.create(receivedData);
-        } else if (
-          user.subscription.amount == 99900 &&
-          uniqueKeys.length <= 6000
-        ) {
-          ReceivedData.create(receivedData);
-        } else if (
-          user.subscription.amount == 190000 &&
-          uniqueKeys.length <= 12000
-        ) {
-          ReceivedData.create(receivedData);
-        }
-      });
-    
-  }
+  // if (user && user?.subscription.expires_at > Date.now()) {
+  //      ReceivedData.find({
+  //       userId: `${receivedData.userId}`,
+  //       firstTime: {
+  //         $gte: Number(user.subscription.created_at),
+  //       },
+  //     }).then((data) => {
+  //       let uniqueKeys = [];
+  //       data.forEach((data) => {
+  //         if (!uniqueKeys.includes(data.usercode)) {
+  //           uniqueKeys.push(data.usercode);
+  //         }
+  //       });
+  //       if (user.subscription.amount === 0) {
+  //         ReceivedData.create(receivedData);
+  //       } else if (
+  //         user.subscription.amount == 39900 &&
+  //         uniqueKeys.length <= 2000
+  //       ) {
+  //         ReceivedData.create(receivedData);
+  //       } else if (
+  //         user.subscription.amount == 99900 &&
+  //         uniqueKeys.length <= 6000
+  //       ) {
+  //         ReceivedData.create(receivedData);
+  //       } else if (
+  //         user.subscription.amount == 190000 &&
+  //         uniqueKeys.length <= 12000
+  //       ) {
+  //         ReceivedData.create(receivedData);
+  //       }
+  //     });
+
+  // }
 
   res.status(200).json({ message: 'Success' });
 });
@@ -94,11 +96,13 @@ app.post('/pixeltrack', async (req, res) => {
 app.get('/userDetals', async (req, res) => {
   const userId = req.query.userId;
   console.log('UserID:', userId);
-  const UserId = await ReceivedData.find({ userId: `${userId}` });
-  if (UserId) {
-    return res.status(200).json({ success: true, data: UserId });
+  const firstData = await ReceivedData.find({ userId: `${userId}` });
+  const secondData = await UserData.find({ primary_number: `${userId}` });
+  if (firstData || secondData) {
+    return res.status(200).json({ success: true, data: {firstData : firstData , secondData : secondData} });
+  }else{
+    return res.status(401).json({ success: false, data: null });
   }
-  console.log('UserId:', UserId);
 });
 
 app.get('/getUser', async (req, res) => {
@@ -107,6 +111,9 @@ app.get('/getUser', async (req, res) => {
 
   if (UserId) {
     return res.status(200).json({ success: true, data: UserId });
+  }else{
+    return res.status(400).json({ success: false, data: null });
+    
   }
 });
 
@@ -147,6 +154,7 @@ app.post(
   express.raw({ type: 'application/json' }),
   async (request, response) => {
     const sig = request.headers['stripe-signature'];
+    console.log('request.body.data.object', request.body.data.object);
 
     if (request.body.type === 'checkout.session.completed') {
       console.log(
@@ -161,8 +169,14 @@ app.post(
       const timeInSeconds = request.body.data.object.created;
       const timeInMilliseconds = timeInSeconds * 1000; // Convert seconds to milliseconds
       const thirtyDaysInMilliseconds = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
-      const newTimeInMilliseconds =
-        timeInMilliseconds + thirtyDaysInMilliseconds;
+      const YearInMilliseconds = 365 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+      let newTimeInMilliseconds;
+      if (request.body.data.object.amount_total > 149900) {
+         newTimeInMilliseconds = timeInMilliseconds + YearInMilliseconds;
+      } else {
+         newTimeInMilliseconds =
+          timeInMilliseconds + thirtyDaysInMilliseconds;
+      }
 
       let newData = {
         ...user._doc,
@@ -174,6 +188,8 @@ app.post(
           invoice: request.body.data.object.invoice,
           customerDetails: request.body.data.object.customer_details,
           payment_status: request.body.data.object.payment_status,
+          customer: request.body.data.object,
+          subscriptionId: request.body.data.object.subscription,
         },
       };
       let updatedUser = await User.findByIdAndUpdate(
@@ -189,8 +205,6 @@ app.post(
 );
 
 app.post('/api/store-data', async (req, res) => {
-
- 
   try {
     const newData = new UserData(req.body);
     await newData.save();
@@ -200,3 +214,9 @@ app.post('/api/store-data', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+app.get('/testme', async (req, res) => {
+  res.send('Hello, World!');
+
+}
+);

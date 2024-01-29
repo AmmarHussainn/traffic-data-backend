@@ -144,7 +144,7 @@ async function updateUser(req, res) {
 
   if (user) {
     const timeInSeconds = Date.now();
-    const sevenDaysInMilliseconds = 7 * 24 * 60 * 60 * 1000;
+    const sevenDaysInMilliseconds = 14 * 24 * 60 * 60 * 1000;
     const newTimeInMilliseconds = timeInSeconds + sevenDaysInMilliseconds;
 
     let newData = {
