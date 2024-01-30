@@ -1,5 +1,4 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const app = express();
@@ -7,18 +6,16 @@ const ReceivedData = require('./Schema/signup');
 const userRoutes = require('./routes/userRoutes');
 const UserActivity = require('./Schema/userActivity');
 const port = process.env.PORT || 8080;
-
+const fs = require('fs');
+const path = require('path');
+const bodyParser = require('body-parser');
+const User = require('./Schema/user');
+const UserData = require('./Schema/userPersonalDetails');
 const mongoURI =
   //  process.env.MONGODB_URI ||
   // 'mongodb+srv://ammarhussain0315:1234@cluster0.um7zey5.mongodb.net/?retryWrites=true&w=majority';
   // ' mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/'
   'mongodb+srv://johncamran28:aDawEwWvdmuOOEyG@cluster0.olbxhxo.mongodb.net/?retryWrites=true&w=majority';
-const bodyParser = require('body-parser');
-const User = require('./Schema/user');
-const UserData = require('./Schema/userPersonalDetails');
-const stripe = require('stripe')(
-  'sk_test_51OSccqJ7ffyJlYAYkKUQKNXIZwdMJYK9xLJZ2AWNMQSUPprAlORUfeztKC7Of9UoiD76sw4ptWAPtmWBnDEuAUFH00Nu2zJJdg'
-);
 app.use(bodyParser.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
@@ -52,43 +49,45 @@ app.use('/users', userRoutes);
 
 app.post('/pixeltrack', async (req, res) => {
   const receivedData = req.body;
-  // const user = await User.findById(receivedData.userId);
-  ReceivedData.create(receivedData);
+  const user = await User.findOne({_id : receivedData.userId});
 
-  // if (user && user?.subscription.expires_at > Date.now()) {
-  //      ReceivedData.find({
-  //       userId: `${receivedData.userId}`,
-  //       firstTime: {
-  //         $gte: Number(user.subscription.created_at),
-  //       },
-  //     }).then((data) => {
-  //       let uniqueKeys = [];
-  //       data.forEach((data) => {
-  //         if (!uniqueKeys.includes(data.usercode)) {
-  //           uniqueKeys.push(data.usercode);
-  //         }
-  //       });
-  //       if (user.subscription.amount === 0) {
-  //         ReceivedData.create(receivedData);
-  //       } else if (
-  //         user.subscription.amount == 39900 &&
-  //         uniqueKeys.length <= 2000
-  //       ) {
-  //         ReceivedData.create(receivedData);
-  //       } else if (
-  //         user.subscription.amount == 99900 &&
-  //         uniqueKeys.length <= 6000
-  //       ) {
-  //         ReceivedData.create(receivedData);
-  //       } else if (
-  //         user.subscription.amount == 190000 &&
-  //         uniqueKeys.length <= 12000
-  //       ) {
-  //         ReceivedData.create(receivedData);
-  //       }
-  //     });
-
-  // }
+  if (user && user?.subscription.expires_at > Date.now()) {
+    ReceivedData.find({
+      userId: `${receivedData.userId}`,
+      firstTime: {
+        $gte: Number(user.subscription.created_at),
+      },
+    }).then(async(data) => {
+      let uniqueKeys = [];
+      data.forEach((data) => {
+        if (!uniqueKeys.includes(data.usercode)) {
+          uniqueKeys.push(data.usercode);
+        }
+      });
+      if (user.subscription.leads > 0) {
+        ReceivedData.create(receivedData);
+        if (!uniqueKeys.includes(receivedData.usercode)) {
+          let newLeads = user.subscription?.leads - 1;
+          console.log('newLeads', newLeads);
+      
+          let updatedUser = await User.findByIdAndUpdate(
+            receivedData.userId,
+            {
+              $set: {
+                'subscription.leads': newLeads,
+              },
+            },
+            {
+              new: true,
+            }
+          );
+      
+          console.log('updatedUser', updatedUser);
+        }
+      }
+   
+    });
+  }
 
   res.status(200).json({ message: 'Success' });
 });
@@ -99,8 +98,11 @@ app.get('/userDetals', async (req, res) => {
   const firstData = await ReceivedData.find({ userId: `${userId}` });
   const secondData = await UserData.find({ primary_number: `${userId}` });
   if (firstData || secondData) {
-    return res.status(200).json({ success: true, data: {firstData : firstData , secondData : secondData} });
-  }else{
+    return res.status(200).json({
+      success: true,
+      data: { firstData: firstData, secondData: secondData },
+    });
+  } else {
     return res.status(401).json({ success: false, data: null });
   }
 });
@@ -111,9 +113,8 @@ app.get('/getUser', async (req, res) => {
 
   if (UserId) {
     return res.status(200).json({ success: true, data: UserId });
-  }else{
+  } else {
     return res.status(400).json({ success: false, data: null });
-    
   }
 });
 
@@ -172,10 +173,28 @@ app.post(
       const YearInMilliseconds = 365 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
       let newTimeInMilliseconds;
       if (request.body.data.object.amount_total > 149900) {
-         newTimeInMilliseconds = timeInMilliseconds + YearInMilliseconds;
+        newTimeInMilliseconds = timeInMilliseconds + YearInMilliseconds;
       } else {
-         newTimeInMilliseconds =
-          timeInMilliseconds + thirtyDaysInMilliseconds;
+        newTimeInMilliseconds = timeInMilliseconds + thirtyDaysInMilliseconds;
+      }
+
+      let leads = 0;
+      if (request.body.data.object.amount_total == 24900) {
+        leads = 1000;
+      } else if (request.body.data.object.amount_total == 39900) {
+        leads = 3000;
+      } else if (request.body.data.object.amount_total == 96000) {
+        leads = 6000;
+      } else if (request.body.data.object.amount_total == 149900) {
+        leads = 10000;
+      } else if (request.body.data.object.amount_total == 370000) {
+        leads = 500;
+      } else if (request.body.data.object.amount_total == 431000) {
+        leads = 2000;
+      } else if (request.body.data.object.amount_total == 919800) {
+        leads = 5000;
+      } else if (request.body.data.object.amount_total == 1618900) {
+        leads = 10000;
       }
 
       let newData = {
@@ -190,6 +209,7 @@ app.post(
           payment_status: request.body.data.object.payment_status,
           customer: request.body.data.object,
           subscriptionId: request.body.data.object.subscription,
+          leads: leads,
         },
       };
       let updatedUser = await User.findByIdAndUpdate(
@@ -216,7 +236,15 @@ app.post('/api/store-data', async (req, res) => {
 });
 
 app.get('/testme', async (req, res) => {
-  res.send('Hello, World!');
+  res.send('Hello, World! Zoop');
+});
 
-}
-);
+
+
+app.get('/pixelCode.js', (req, res) => {
+  let query = req.query;
+  console.log('query', query);
+  let data = `let firstTime=Date.now(),sepratecode=Math.floor(1e6+9e6*Math.random()),usercode=sessionStorage.getItem("t-d-labs-u-id")||Math.floor(1e6+9e6*Math.random()),ip;async function startTrackingTime(){ip=await fetch("http://ip-api.com/json").then((e=>e.json())).then((e=>e))}function stopTrackingTime(){sessionStorage.setItem("t-d-labs-u-id",usercode),fetch("https://fast-anchorage-52648-37ea5d9b7bab.herokuapp.com/pixeltrack",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstTime:firstTime,endTime:Date.now(),timeSpent:Date.now()-firstTime,date:(new Date).toUTCString(),domain:new URL(window.location.href).hostname,pageName:new URL(window.location.href).pathname,sepratecode:sepratecode,ip:ip,userId:"${query.userId}",referrer:document.referrer,browser:navigator.userAgent.includes("Chrome")?"Chrome":"Safari",agent:/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)?"Mobile":"Desktop",usercode:Number(usercode)})})}startTrackingTime(),document.addEventListener("visibilitychange",()=>{"hidden"===document.visibilityState&&stopTrackingTime()}),window.addEventListener("blur",()=>{stopTrackingTime()}),window.addEventListener("beforeunload",()=>{stopTrackingTime(),console.log("Total time spent on page: "+totalTime/1e3+" seconds")})`
+    res.type('application/javascript');
+    res.send(data);
+});

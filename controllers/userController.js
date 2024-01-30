@@ -61,16 +61,27 @@ async function registerUser(req, res) {
   }
 
   let newPass = generatePassHash(password);
+  const timeInSeconds = Date.now();
+  const sevenDaysInMilliseconds = 14 * 24 * 60 * 60 * 1000;
+  const newTimeInMilliseconds = timeInSeconds + sevenDaysInMilliseconds;
 
+ 
   const user = new User({
     email: email,
     websiteName: websiteName, // Change from businessName to websiteName
     firstName: firstName, // New field
     lastName: lastName, // New field
     password: newPass,
-    freeTrialAvailed: false,
-    freetrialCreated: null, // Assuming freetrialCreated is a date field
-    subscription: null, // Assuming subscription is an object field
+    subscription: {
+      amount: 0,
+      created_at: Date.now(),
+      expires_at: newTimeInMilliseconds,
+      id: 'FreeTrial',
+      invoice: 'FreeTrial',
+      payment_status: 'paid',
+      leads : 2000
+    },
+    freeTrialAvailed: true,
   });
 
   const userData = await user.save();
@@ -90,18 +101,18 @@ async function loginUser(req, res) {
     if (!email || !password) {
       return res
         .status(400)
-        .json({ message: 'Email and password are required.' });
+        .json({success : false , message: 'Email and password are required.' });
     }
 
     try {
       const user = await User.findOne({ email });
       if (!user) {
         console.log('User not found');
-        return res.status(401).json({ message: 'Invalid email or password.' });
+        return res.status(200).json({success : false , message: 'Invalid email or password.' });
       }
       console.log('user1', user);
       if (!verifyPass(password, user.password)) {
-        return res.status(401).json({ message: 'Invalid  password.' });
+        return res.status(200).json({ message: 'Invalid  password.' });
       }
       const token = jwt.sign({ userId: user._id }, JWT_SECRET, {
         expiresIn: '1h',
@@ -117,6 +128,7 @@ async function loginUser(req, res) {
       }
 
       return res.json({
+        success : true ,
         message: 'Login successful.',
         data: user,
         token: token,
@@ -125,13 +137,13 @@ async function loginUser(req, res) {
       console.error('User retrieval error:', userError);
       return res
         .status(500)
-        .json({ message: 'Login failed. Please try again later.' });
+        .json({ success : false , message: 'Login failed. Please try again later.' });
     }
   } catch (error) {
     console.error(error);
     return res
       .status(500)
-      .json({ message: 'Login failed. Please try again later.' });
+      .json({  success : false ,message: 'Login failed. Please try again later.' });
   }
 }
 
@@ -267,7 +279,7 @@ async function UpdateUserPersonalDetails(req, res) {
       const checkEmail = await User.findOne({ email: data.email });
      console.log('checkEmail', checkEmail);
       if (checkEmail) {
-        return res.status(400).json({ message: 'Email already exists.' });
+        return res.status(200).json({ success : false ,  data: null , message: 'Email already exists'});
       }
     }
 
@@ -275,9 +287,6 @@ async function UpdateUserPersonalDetails(req, res) {
     user.lastName = data.lastName;
     user.phoneNumber = data.phoneNumber;
     user.email = data.email;
-
-    // Handle password updates if needed
-    // user.password = hashedPassword;
 
     const updatedUser = await user.save();
 
@@ -297,11 +306,54 @@ async function UpdateUserPersonalDetails(req, res) {
     });
   }
 }
+async function UpdateUserPassword(req, res) {
+  try {
+    const data = req.body;
+    console.log('data', data);
+
+    const user = await User.findOne({ _id: data.userId });
+    console.log('user', user);
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found.',
+        success: false,
+      });
+    }
+    // currentPassoword: state.currentPassoword,
+    // newPassoword: state.newPassoword,
+    // confirmPassoword: state.confirmPassoword,
+    let newPass = generatePassHash(data.confirmPassoword);
+    
+
+    if(!verifyPass(data.currentPassoword, user.password)){
+      return res.status(200).json({success : false , data : null , message: 'Invalid Current password.' });
+    }
+    user.password = newPass;
+
+    const updatedUser = await user.save();
+
+    console.log('updatedUser', updatedUser);
+
+    return res.status(201).json({
+      message: 'User updated successfully.',
+      data: null,
+      success: true,
+    });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return res.status(500).json({
+      message: 'User update failed.',
+      error: error.message,
+      success: false,
+    });
+  }
+}
 
 module.exports = {
   registerUser,
   loginUser,
   updateUser,
   forgetPassword,
-  UpdateUserPersonalDetails
+  UpdateUserPersonalDetails,
+  UpdateUserPassword
 };
