@@ -72,6 +72,7 @@ async function registerUser(req, res) {
     firstName: firstName, // New field
     lastName: lastName, // New field
     password: newPass,
+    SecondTimeCredits:false,
     subscription: {
       amount: 0,
       created_at: Date.now(),
@@ -79,7 +80,8 @@ async function registerUser(req, res) {
       id: 'FreeTrial',
       invoice: 'FreeTrial',
       payment_status: 'paid',
-      leads : 2000
+      leads : 2000,
+      totalLeads : 2000
     },
     freeTrialAvailed: true,
   });

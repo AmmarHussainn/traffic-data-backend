@@ -49,7 +49,7 @@ app.use('/users', userRoutes);
 
 app.post('/pixeltrack', async (req, res) => {
   const receivedData = req.body;
-  const user = await User.findOne({_id : receivedData.userId});
+  const user = await User.findOne({ _id: receivedData.userId });
 
   if (user && user?.subscription.expires_at > Date.now()) {
     ReceivedData.find({
@@ -57,7 +57,7 @@ app.post('/pixeltrack', async (req, res) => {
       firstTime: {
         $gte: Number(user.subscription.created_at),
       },
-    }).then(async(data) => {
+    }).then(async (data) => {
       let uniqueKeys = [];
       data.forEach((data) => {
         if (!uniqueKeys.includes(data.usercode)) {
@@ -69,7 +69,7 @@ app.post('/pixeltrack', async (req, res) => {
         if (!uniqueKeys.includes(receivedData.usercode)) {
           let newLeads = user.subscription?.leads - 1;
           console.log('newLeads', newLeads);
-      
+
           let updatedUser = await User.findByIdAndUpdate(
             receivedData.userId,
             {
@@ -81,11 +81,10 @@ app.post('/pixeltrack', async (req, res) => {
               new: true,
             }
           );
-      
+
           console.log('updatedUser', updatedUser);
         }
       }
-   
     });
   }
 
@@ -196,10 +195,25 @@ app.post(
       } else if (request.body.data.object.amount_total == 1618900) {
         leads = 10000;
       }
+      if (
+        user[0]?.subscription &&
+        user[0]?.subscription?.leads > 0 &&
+        request.body.data.object.amount_total !== 14000
+      ) {
+        totalLeads = user[0]?.subscription?.totalLeads + leads;
+        leads = user[0]?.subscription?.leads + leads;
+      }
 
       let newData = {
-        ...user._doc,
-        subscription: {
+        ...user[0]._doc,
+      };
+      if (request.body.data.object.amount_total == 14000) {
+        console.log('newData',newData)
+        newData.subscription.totalLeads = user[0]?.subscription?.totalLeads +1000
+        newData.subscription.leads = user[0]?.subscription?.leads +1000
+        newData.SecondTimeCredits = true
+      } else {
+        newData.subscription = {
           amount: request.body.data.object.amount_total,
           created_at: request.body.data.object.created * 1000,
           expires_at: newTimeInMilliseconds,
@@ -210,8 +224,9 @@ app.post(
           customer: request.body.data.object,
           subscriptionId: request.body.data.object.subscription,
           leads: leads,
-        },
-      };
+          totalLeads: leads,
+        };
+      }
       let updatedUser = await User.findByIdAndUpdate(
         request.body.data.object.client_reference_id,
         newData,
@@ -239,12 +254,10 @@ app.get('/testme', async (req, res) => {
   res.send('Hello, World! Zoop');
 });
 
-
-
 app.get('/pixelCode.js', (req, res) => {
   let query = req.query;
   console.log('query', query);
-  let data = `let firstTime=Date.now(),sepratecode=Math.floor(1e6+9e6*Math.random()),usercode=sessionStorage.getItem("t-d-labs-u-id")||Math.floor(1e6+9e6*Math.random()),ip;async function startTrackingTime(){ip=await fetch("http://ip-api.com/json").then((e=>e.json())).then((e=>e))}function stopTrackingTime(){sessionStorage.setItem("t-d-labs-u-id",usercode),fetch("https://fast-anchorage-52648-37ea5d9b7bab.herokuapp.com/pixeltrack",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstTime:firstTime,endTime:Date.now(),timeSpent:Date.now()-firstTime,date:(new Date).toUTCString(),domain:new URL(window.location.href).hostname,pageName:new URL(window.location.href).pathname,sepratecode:sepratecode,ip:ip,userId:"${query.userId}",referrer:document.referrer,browser:navigator.userAgent.includes("Chrome")?"Chrome":"Safari",agent:/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)?"Mobile":"Desktop",usercode:Number(usercode)})})}startTrackingTime(),document.addEventListener("visibilitychange",()=>{"hidden"===document.visibilityState&&stopTrackingTime()}),window.addEventListener("blur",()=>{stopTrackingTime()}),window.addEventListener("beforeunload",()=>{stopTrackingTime(),console.log("Total time spent on page: "+totalTime/1e3+" seconds")})`
-    res.type('application/javascript');
-    res.send(data);
+  let data = `let firstTime=Date.now(),sepratecode=Math.floor(1e6+9e6*Math.random()),usercode=sessionStorage.getItem("t-d-labs-u-id")||Math.floor(1e6+9e6*Math.random()),ip;async function startTrackingTime(){ip=await fetch("http://ip-api.com/json").then((e=>e.json())).then((e=>e))}function stopTrackingTime(){sessionStorage.setItem("t-d-labs-u-id",usercode),fetch("https://fast-anchorage-52648-37ea5d9b7bab.herokuapp.com/pixeltrack",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstTime:firstTime,endTime:Date.now(),timeSpent:Date.now()-firstTime,date:(new Date).toUTCString(),domain:new URL(window.location.href).hostname,pageName:new URL(window.location.href).pathname,sepratecode:sepratecode,ip:ip,userId:"${query.userId}",referrer:document.referrer,browser:navigator.userAgent.includes("Chrome")?"Chrome":"Safari",agent:/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)?"Mobile":"Desktop",usercode:Number(usercode)})})}startTrackingTime(),document.addEventListener("visibilitychange",()=>{"hidden"===document.visibilityState&&stopTrackingTime()}),window.addEventListener("blur",()=>{stopTrackingTime()}),window.addEventListener("beforeunload",()=>{stopTrackingTime(),console.log("Total time spent on page: "+totalTime/1e3+" seconds")})`;
+  res.type('application/javascript');
+  res.send(data);
 });

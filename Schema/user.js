@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema({
   newPassTesting: { type: String },
   freeTrialAvailed: { type: Boolean, default: false },
   freetrialCreated: { type: Date },
+  SecondTimeCredits : {type : Boolean , default : false},
   subscription: {
     amount: { type: Number },
     created_at: { type: Number },
@@ -49,6 +50,7 @@ const userSchema = new mongoose.Schema({
     customerDetails: { type: Object },
     customer: { type: Object },
     leads: { type: Number },
+    totalLeads: { type: Number },
   },
   phoneNumber: { type: String },
 });
