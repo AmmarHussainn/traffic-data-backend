@@ -11,6 +11,8 @@ router.post('/updateUser', userController.updateUser);
 router.post('/forgetPassword', userController.forgetPassword);
 router.post('/UpdateUserPersonalDetails', userController.UpdateUserPersonalDetails);
 router.post('/UpdateUserPassword', userController.UpdateUserPassword);
+router.get('/getMembers', userController.GetMembers);
+router.delete('/DeleteUser', userController.DeleteUser);
 
 // // Route for email verification (using OTP)
 // router.post('/verify', userController.verifyEmail);

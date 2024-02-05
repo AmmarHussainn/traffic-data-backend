@@ -211,7 +211,6 @@ app.post(
         console.log('newData',newData)
         newData.subscription.totalLeads = user[0]?.subscription?.totalLeads +1000
         newData.subscription.leads = user[0]?.subscription?.leads +1000
-        newData.SecondTimeCredits = true
       } else {
         newData.subscription = {
           amount: request.body.data.object.amount_total,
@@ -261,3 +260,8 @@ app.get('/pixelCode.js', (req, res) => {
   res.type('application/javascript');
   res.send(data);
 });
+
+
+//AddUser@gmail.com
+//newTestingU@gmail.com
+//AliKhan@gmail.com

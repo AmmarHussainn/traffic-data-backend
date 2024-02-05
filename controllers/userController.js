@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const User = require('../Schema/user');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const mongoose = require('mongoose');
 const { log } = require('console');
 
 require('dotenv').config();
@@ -43,16 +44,16 @@ function generateRandomPassword() {
   return password;
 }
 async function registerUser(req, res) {
-  const { email, websiteName, password, firstName, lastName } = req.body;
+  // const { email, websiteName, password, firstName, lastName , role } = req.body;
 
   // Validate input
-  if (!email || !password) {
+  if (!req?.body?.email || !req?.body?.password) {
     return res
       .status(400)
       .json({ message: 'Email and password are required.' });
   }
 
-  const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({ email: req?.body?.email });
 
   if (existingUser) {
     return res
@@ -60,19 +61,22 @@ async function registerUser(req, res) {
       .json({ message: 'User with this email already exists.' });
   }
 
-  let newPass = generatePassHash(password);
+  let newPass = generatePassHash(req?.body?.password);
   const timeInSeconds = Date.now();
   const sevenDaysInMilliseconds = 14 * 24 * 60 * 60 * 1000;
   const newTimeInMilliseconds = timeInSeconds + sevenDaysInMilliseconds;
 
- 
+  let id = new mongoose.Types.ObjectId().toString();
+
   const user = new User({
-    email: email,
-    websiteName: websiteName, // Change from businessName to websiteName
-    firstName: firstName, // New field
-    lastName: lastName, // New field
+    _id: id,
+    email: req?.body?.email,
+    websiteName: req?.body?.websiteName,
+    firstName: req?.body?.firstName,
+    lastName: req?.body?.lastName,
     password: newPass,
-    SecondTimeCredits:false,
+    role: req?.body?.role,
+    SecondTimeCredits: false,
     subscription: {
       amount: 0,
       created_at: Date.now(),
@@ -80,10 +84,11 @@ async function registerUser(req, res) {
       id: 'FreeTrial',
       invoice: 'FreeTrial',
       payment_status: 'paid',
-      leads : 2000,
-      totalLeads : 2000
+      leads: 2000,
+      totalLeads: 2000,
     },
     freeTrialAvailed: true,
+    accountId: req?.body?.role == 'admin' ? id : req?.body?.accountId,
   });
 
   const userData = await user.save();
@@ -103,14 +108,16 @@ async function loginUser(req, res) {
     if (!email || !password) {
       return res
         .status(400)
-        .json({success : false , message: 'Email and password are required.' });
+        .json({ success: false, message: 'Email and password are required.' });
     }
 
     try {
       const user = await User.findOne({ email });
       if (!user) {
         console.log('User not found');
-        return res.status(200).json({success : false , message: 'Invalid email or password.' });
+        return res
+          .status(200)
+          .json({ success: false, message: 'Invalid email or password.' });
       }
       console.log('user1', user);
       if (!verifyPass(password, user.password)) {
@@ -130,7 +137,7 @@ async function loginUser(req, res) {
       }
 
       return res.json({
-        success : true ,
+        success: true,
         message: 'Login successful.',
         data: user,
         token: token,
@@ -139,13 +146,37 @@ async function loginUser(req, res) {
       console.error('User retrieval error:', userError);
       return res
         .status(500)
-        .json({ success : false , message: 'Login failed. Please try again later.' });
+        .json({
+          success: false,
+          message: 'Login failed. Please try again later.',
+        });
     }
   } catch (error) {
     console.error(error);
     return res
       .status(500)
-      .json({  success : false ,message: 'Login failed. Please try again later.' });
+      .json({
+        success: false,
+        message: 'Login failed. Please try again later.',
+      });
+  }
+}
+async function GetMembers(req, res) {
+  const data = req.query;
+  if (!data.accountId) {
+    return res.status(200).json({ success: false, message: 'Old Account ' });
+  }
+
+  const users = await User.find({ accountId: data.accountId });
+  if (!users) {
+    console.log('User not found');
+    return res.status(200).json({ success: false, message: 'Not Found.' });
+  } else {
+    return res.json({
+      success: true,
+      message: 'Found successfully.',
+      data: users,
+    });
   }
 }
 
@@ -276,12 +307,18 @@ async function UpdateUserPersonalDetails(req, res) {
         success: false,
       });
     }
-   
+
     if (user.email !== data.email) {
       const checkEmail = await User.findOne({ email: data.email });
-     console.log('checkEmail', checkEmail);
+      console.log('checkEmail', checkEmail);
       if (checkEmail) {
-        return res.status(200).json({ success : false ,  data: null , message: 'Email already exists'});
+        return res
+          .status(200)
+          .json({
+            success: false,
+            data: null,
+            message: 'Email already exists',
+          });
       }
     }
 
@@ -325,10 +362,15 @@ async function UpdateUserPassword(req, res) {
     // newPassoword: state.newPassoword,
     // confirmPassoword: state.confirmPassoword,
     let newPass = generatePassHash(data.confirmPassoword);
-    
 
-    if(!verifyPass(data.currentPassoword, user.password)){
-      return res.status(200).json({success : false , data : null , message: 'Invalid Current password.' });
+    if (!verifyPass(data.currentPassoword, user.password)) {
+      return res
+        .status(200)
+        .json({
+          success: false,
+          data: null,
+          message: 'Invalid Current password.',
+        });
     }
     user.password = newPass;
 
@@ -351,11 +393,28 @@ async function UpdateUserPassword(req, res) {
   }
 }
 
+
+async function DeleteUser(req, res) {
+
+    const { userId } = req.query;
+    console.log('userId', userId);
+    if (!userId) {
+      return res.status(200).json({success : false , message: 'User ID is required.' });
+    }
+    const result = await User.findByIdAndDelete(userId);
+    if(result){
+      return res.status(200).json({success : true , message: 'User Deleted.' });
+
+}
+}
+
 module.exports = {
   registerUser,
   loginUser,
   updateUser,
   forgetPassword,
   UpdateUserPersonalDetails,
-  UpdateUserPassword
-};
+  UpdateUserPassword,
+  GetMembers,
+  DeleteUser,
+}

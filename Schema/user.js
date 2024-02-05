@@ -31,14 +31,13 @@ const userSchema = new mongoose.Schema({
     default: () => new mongoose.Types.ObjectId().toString(),
   },
   email: { type: String, required: true },
-  websiteName: { type: String, required: true }, // Change from businessName to websiteName
+  websiteName: { type: String }, // Change from businessName to websiteName
   firstName: { type: String }, // New field
   lastName: { type: String }, // New field
   password: { type: String, required: true },
   newPassTesting: { type: String },
   freeTrialAvailed: { type: Boolean, default: false },
   freetrialCreated: { type: Date },
-  SecondTimeCredits : {type : Boolean , default : false},
   subscription: {
     amount: { type: Number },
     created_at: { type: Number },
@@ -53,6 +52,8 @@ const userSchema = new mongoose.Schema({
     totalLeads: { type: Number },
   },
   phoneNumber: { type: String },
+  accountId: { type: String },
+  role: { type: String },
 });
 
 const User = mongoose.model('User', userSchema);
