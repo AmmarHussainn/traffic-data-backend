@@ -47,10 +47,74 @@ run();
 
 app.use('/users', userRoutes);
 
+
+async function enrichPerson(personId, apiKey) {
+  const url = 'https://api.fullcontact.com/v3/person.enrich';
+
+  const headers = {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+  };
+
+  const body = JSON.stringify({
+      "personId": personId
+  });
+  try {
+      const response = await fetch(url, {
+          method: 'POST',
+          headers: headers,
+          body: body
+      });
+      if (!response.ok) {
+          throw new Error(`API call failed: ${response.status} - ${response.statusText}`);
+      }
+      const data = await response.json();
+            const md5Emails = data.details.emails.map(email => email.md5);         
+              getEmailAddresses(md5Emails);
+            return data; // Return the data for further processing       
+  } catch (error) {
+      console.error('Error calling FullContact Enrich API:', error);
+      throw error; // Rethrow or handle error as needed
+  }
+
+}
+async function getEmailAddresses(md5Emails) {
+  try {
+      const response = await fetch('https://secureapi.datazapp.com/Appendv2', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer IYBTCNRIDM' // or any other way your API requires the API key to be passed
+          },
+          body: JSON.stringify({
+              ApiKey: "IYBTCNRIDM",
+              AppendModule: "EncryptedEmailAppendAPI",
+              AppendType: 2,  //2 - MD5 | 1 - SHA256
+              Data: md5Emails.map(md5 => ({ emailMD5Lower: md5 })) // map MD5 emails to the required format
+          })
+      });
+      if (!response.ok) {
+          throw new Error(`API call failed: ${response.status} - ${response.statusText}`);
+      }
+      const data = await response.json();       
+      const filteredData = data.ResponseDetail.Data.filter(item => item.Matched === true);
+      //  console.log('Filtered Data:', filteredData);
+      return filteredData;
+  } catch (error) {
+      console.error('Error calling Email Append API:', error);
+      throw error;
+  }
+}
+
+// const personId = 'g95SnE0av8hRrVm73l8W6X1wFBLMtF_Ml1vnpBJrL7k077ON'; // Replace with actual personId
+
+// enrichPerson(personId, apiKey)
 app.post('/pixeltrack', async (req, res) => {
   const receivedData = req.body;
+ 
   const user = await User.findOne({ _id: receivedData.userId });
-
+  let   iwid = 'g95SnE0av8hRrVm73l8W6X1wFBLMtF_Ml1vnpBJrL7k077ON';
+  const apiKey = 'z5cKCDKiBCemphHQ84fDX9FpnowUXGrd';
   if (user && user?.subscription.expires_at > Date.now()) {
     ReceivedData.find({
       userId: `${receivedData.userId}`,
@@ -65,24 +129,63 @@ app.post('/pixeltrack', async (req, res) => {
         }
       });
       if (user.subscription.leads > 0) {
-        ReceivedData.create(receivedData);
-        if (!uniqueKeys.includes(receivedData.usercode)) {
-          let newLeads = user.subscription?.leads - 1;
-          console.log('newLeads', newLeads);
+     
+        //cookie Id wali API jissay data ayga
+        // receivedData.iwid = receivedData.iwid || receivedData.fc_session;
+        
+      
+        if (iwid) {
+         
 
-          let updatedUser = await User.findByIdAndUpdate(
-            receivedData.userId,
-            {
-              $set: {
-                'subscription.leads': newLeads,
-              },
-            },
-            {
-              new: true,
+
+
+
+          // ReceivedData.create(receivedData);
+          // if (!uniqueKeys.includes(receivedData.usercode)) {
+          //   let newLeads = user.subscription?.leads - 1;
+          //   console.log('newLeads', newLeads);
+  
+          //   let updatedUser = await User.findByIdAndUpdate(
+          //     receivedData.userId,
+          //     {
+          //       $set: {
+          //         'subscription.leads': newLeads,
+          //       },
+          //     },
+          //     {
+          //       new: true,
+          //     }
+          //   );
+  
+          //   console.log('updatedUser', updatedUser);
+          // }
+          try {
+            const  filteredData  = await enrichPerson(iwid, apiKey); 
+            
+        console.log('filteredData:', filteredData); 
+        ReceivedData.Enriched = filteredData;
+            ReceivedData.create(receivedData);
+            if (!uniqueKeys.includes(receivedData.usercode)) {
+                let newLeads = user.subscription?.leads - 1;
+                console.log('newLeads', newLeads);
+                let updatedUser = await User.findByIdAndUpdate(
+                    receivedData.userId,
+                    {
+                        $set: {
+                            'subscription.leads': newLeads,
+                        },
+                    },
+                    {
+                        new: true,
+                    }
+                );
+
+                console.log('updatedUser', updatedUser);
             }
-          );
+        } catch (error) {
+            console.error('Error in enriching person data:', error);
+        }
 
-          console.log('updatedUser', updatedUser);
         }
       }
     });
@@ -256,7 +359,58 @@ app.get('/testme', async (req, res) => {
 app.get('/pixelCode.js', (req, res) => {
   let query = req.query;
   console.log('query', query);
-  let data = `let firstTime=Date.now(),sepratecode=Math.floor(1e6+9e6*Math.random()),usercode=sessionStorage.getItem("t-d-labs-u-id")||Math.floor(1e6+9e6*Math.random()),ip;async function startTrackingTime(){ip=await fetch("http://ip-api.com/json").then((e=>e.json())).then((e=>e))}function stopTrackingTime(){sessionStorage.setItem("t-d-labs-u-id",usercode),fetch("https://fast-anchorage-52648-37ea5d9b7bab.herokuapp.com/pixeltrack",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstTime:firstTime,endTime:Date.now(),timeSpent:Date.now()-firstTime,date:(new Date).toUTCString(),domain:new URL(window.location.href).hostname,pageName:new URL(window.location.href).pathname,sepratecode:sepratecode,ip:ip,userId:"${query.userId}",referrer:document.referrer,browser:navigator.userAgent.includes("Chrome")?"Chrome":"Safari",agent:/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)?"Mobile":"Desktop",usercode:Number(usercode)})})}startTrackingTime(),document.addEventListener("visibilitychange",()=>{"hidden"===document.visibilityState&&stopTrackingTime()}),window.addEventListener("blur",()=>{stopTrackingTime()}),window.addEventListener("beforeunload",()=>{stopTrackingTime(),console.log("Total time spent on page: "+totalTime/1e3+" seconds")})`;
+  let data = `
+  (function (w, d, s, o, f, js, fjs) {
+    w['FCObject'] = o;
+    w[o] =
+      w[o] ||
+      function () {
+        (w[o].q = w[o].q || []).push(arguments);
+      };
+    (js = d.createElement(s)), (fjs = d.getElementsByTagName(s)[0]);
+    js.id = o;
+    js.src = f;
+    js.async = 1;
+    fjs.parentNode.insertBefore(js, fjs);
+  })(
+    window,
+    document,
+    'script',
+    'fc',
+    'https://tags.fullcontact.com/anon/fullcontact.js'
+  );
+  fc('init', 'WjKCaqyOzbF5E8RURfB2HVGXBRhRmYD5');
+  function getCookie(name) {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.startsWith(name + '=')) {
+        return cookie.substring(name.length + 1);
+      }
+    }
+    return null;
+  }
+
+  
+  window.onload = function () {
+   
+    let iwid = getCookie('iw_id');
+    if (iwid) {
+      console.log('iw_id:', iwid);
+    
+    } else {
+      console.log('iw_id cookie not found');
+     
+      let fcSession = getCookie('fc_session');
+      if (fcSession) {
+        console.log('fc_session:', fcSession);
+      
+      } else {
+        console.log('fc_session cookie not found either');
+      }
+    }
+  };
+  let firstTime=Date.now(),sepratecode=Math.floor(1e6+9e6*Math.random()),usercode=sessionStorage.getItem("t-d-labs-u-id")||Math.floor(1e6+9e6*Math.random()),ip;async function startTrackingTime(){ip=await fetch("http://ip-api.com/json").then((e=>e.json())).then((e=>e))}function stopTrackingTime(){sessionStorage.setItem("t-d-labs-u-id",usercode),fetch("http://localhost:8080/pixeltrack",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ firstTime:firstTime,endTime:Date.now(),timeSpent:Date.now()-firstTime,date:(new Date).toUTCString(),domain:new URL(window.location.href).hostname,pageName:new URL(window.location.href).pathname,sepratecode:sepratecode,ip:ip,userId:"${query.userId}",referrer:document.referrer,browser:navigator.userAgent.includes("Chrome")?"Chrome":"Safari",agent:/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)?"Mobile":"Desktop",usercode:Number(usercode)})})}startTrackingTime(),document.addEventListener("visibilitychange",()=>{"hidden"===document.visibilityState&&stopTrackingTime()}),window.addEventListener("blur",()=>{stopTrackingTime()}),window.addEventListener("beforeunload",()=>{stopTrackingTime(),console.log("Total time spent on page: "+totalTime/1e3+" seconds")})`;
   res.type('application/javascript');
   res.send(data);
 });

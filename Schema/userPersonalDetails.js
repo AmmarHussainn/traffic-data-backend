@@ -4,12 +4,7 @@ const addressSchema = new mongoose.Schema({
     street: {
         type: Object,
     },
-    // street: {
-    //     street_name: { type: String },
-    //     street_suffix: { type: String },
-    //     pre_directional: { type: String },
-    //     post_directional: { type: String },
-    // },
+
     unit: {
         type : Object,
     },

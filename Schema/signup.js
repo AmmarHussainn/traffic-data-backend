@@ -31,6 +31,11 @@ const receivedDataSchema = new mongoose.Schema(
     referrer: { type: String },
     agent: { type: String },
     browser: { type: String },
+    Address : { type: String },
+    City : { type: String },
+    ZIP : { type: String },
+    Enriched : { type: Array }, 
+   
   }
 );
 
