@@ -511,7 +511,7 @@ app.get('/pixelCode.js', (req, res) => {
   let data = ` 
   var CookieHolder ;
 
- fetch('https://fast-anchorage-52648-37ea5d9b7bab.herokuapp.com/leadsAvailability?userId='${query.userId}, {
+ fetch('https://fast-anchorage-52648-37ea5d9b7bab.herokuapp.com/leadsAvailability?userId=${query.userId}, {
     method: "GET",
     headers: {
         'userId': userId
