@@ -548,35 +548,13 @@ app.get('/pixelCode.js', (req, res) => {
           fc('init', data.id, config);
           //////****Initialization for FC */
           
-          async function callback_function(pid) {
-            const endpoint = 'https://pid-list-saver-dc1b3ad9db69.herokuapp.com/pid/' //send IW_ID to your endpoint with this
-            const data = {pid: pid};
-          
-            const body = JSON.stringify(data);
-            fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-            })
-            .catch(error => {
-            });
-          }
+      
           
           waitForCookie('iw_id')
             .then(async cookieValue => {
                 console.log('iw_id cookie value:', cookieValue);
                   cookieValue = CookieHolder;
-                await callback_function(cookieValue)
+
             })
             .catch(error => {
                 console.error(error.message);
