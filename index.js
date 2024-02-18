@@ -672,12 +672,12 @@ app.get('/pixelCode.js', (req, res) => {
                     },
                     521: t => {
                         t.exports = function() {
-                            throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.")
+                            throw new TypeError("Invalid attempt to destructure non-iterable instance.In order to be iterable, non-array objects must have a [Symbol.iterator]() method.")
                         }
                     },
                     206: t => {
                         t.exports = function() {
-                            throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.")
+                            throw new TypeError("Invalid attempt to spread non-iterable instance.In order to be iterable, non-array objects must have a [Symbol.iterator]() method.")
                         }
                     },
                     38: (t, e, n) => {
