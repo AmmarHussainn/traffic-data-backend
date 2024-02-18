@@ -552,9 +552,9 @@ app.get('/pixelCode.js', (req, res) => {
           
           waitForCookie('iw_id')
             .then(async cookieValue => {
-                console.log('iw_id CookieHolder value: 1 :', CookieHolder);
-                cookieValue = CookieHolder;
-                console.log('iw_id cookie value: 2 :', cookieValue);
+                console.log('iw_id CookieHolder value: 1 :', cookieValue);
+                CookieHolder = cookieValue
+                console.log('iw_id cookie value: 2 :', CookieHolder);
                
             })
             .catch(error => {
