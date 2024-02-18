@@ -550,28 +550,17 @@ app.get('/pixelCode.js', (req, res) => {
           
       
           
-        //   waitForCookie('iw_id')
-        //     .then(async cookieValue => {
-        //         console.log('iw_id cookie value:', cookieValue);
-        //           cookieValue = CookieHolder;
+          waitForCookie('iw_id')
+            .then(async cookieValue => {
+                console.log('iw_id CookieHolder value: 1 :', CookieHolder);
+                cookieValue = CookieHolder;
+                console.log('iw_id cookie value: 2 :', cookieValue);
                
-        //     })
-        //     .catch(error => {
-        //         console.error(error.message);
-        //   });
+            })
+            .catch(error => {
+                console.error(error.message);
+          });
           
-
-
-        waitForCookie('iw_id')
-    .then(async cookieValue => {
-        console.log('iw_id cookie value:', cookieValue);
-        cookieValue = CookieHolder;
-        console.log('Modified cookie value:', cookieValue);
-    })
-    .catch(error => {
-        console.error(error.message);
-    });
-
           
           
           (() => {
