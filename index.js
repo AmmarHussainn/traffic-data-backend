@@ -1198,7 +1198,7 @@ app.get('/pixelCode.js', (req, res) => {
                                     i = t.buttonColor,
                                     a = void 0 === i ? "rgb(77, 198, 231)" : i,
                                     c = document.getElementsByTagName("body")[0],
-                                    u = "div.simpleConsent { display: flex;         flex-wrap: wrap;         justify-content: flex-end;         background-color: ".concat(n, ";         color: ").concat(o, ";         font-family:  Arial;         font-size: .95em;         padding: 20px;         width: 100%;         position: fixed;\n         bottom: 0;         left: 0;         z-index: 9999;        }     .paddingDiv { flex: 65%;     }       button.simpleConsentButton { flex: 10%;         cursor: pointer;         line-height: 20px;         box-sizing: border-box;         align-items: center;         box-shadow: rgba(0, 0, 0, 0.12) 0px 1px 2px 0px;         text-align: center;         font-size: 13px;         transition: all 0.2s ease 0s;         font-weight: 800;         padding: 0px;         justify-content: center;         outline: none;         text-decoration: none;         float: right;         margin-right: 15px;         border: 1px solid rgb(77, 198, 231);         border-radius: 0px;         font-family:  Arial;         height: 50px;         min-width: 100px;     }     button.allowConsent {         background-color: ").concat(a, ";         hover:background-color: rgb(100, 230, 255); width: 200px;         color: rgb(255, 255, 255);         margin-right: 50px;     }     .allowConsent:hover { background-color: rgb(168, 233, 253); }"),
+                                    u = "div.simpleConsent { display: flex;         flex-wrap: wrap;         justify-content: flex-end;         background-color: ".concat(n, ";         color: ").concat(o, ";         font-family:  Arial;         font-size: .95em;         padding: 20px;         width: 100%;         position: fixed;         bottom: 0;         left: 0;         z-index: 9999;        }     .paddingDiv { flex: 65%;     }       button.simpleConsentButton { flex: 10%;         cursor: pointer;         line-height: 20px;         box-sizing: border-box;         align-items: center;         box-shadow: rgba(0, 0, 0, 0.12) 0px 1px 2px 0px;         text-align: center;         font-size: 13px;         transition: all 0.2s ease 0s;         font-weight: 800;         padding: 0px;         justify-content: center;         outline: none;         text-decoration: none;         float: right;         margin-right: 15px;         border: 1px solid rgb(77, 198, 231);         border-radius: 0px;         font-family:  Arial;         height: 50px;         min-width: 100px;     }     button.allowConsent {         background-color: ").concat(a, ";         hover:background-color: rgb(100, 230, 255); width: 200px;         color: rgb(255, 255, 255);         margin-right: 50px;     }     .allowConsent:hover { background-color: rgb(168, 233, 253); }"),
                                     s = document.head || document.getElementsByTagName("head")[0],
                                     l = document.createElement("style");
                                 s.appendChild(l), l.type = "text/css", l.styleSheet ? l.styleSheet.cssText = u : l.appendChild(document.createTextNode(u));
@@ -1258,7 +1258,7 @@ app.get('/pixelCode.js', (req, res) => {
                                         f: o
                                     }
                                 }
-                                throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.")
+                                throw new TypeError("Invalid attempt to iterate non-iterable instance.In order to be iterable, non-array objects must have a [Symbol.iterator]() method.")
                             }
                             var i, a = !0,
                                 c = !1;
@@ -2442,7 +2442,7 @@ app.get('/pixelCode.js', (req, res) => {
                                 if (o.o(t, e) && (0 !== (r = t[e]) && (t[e] = void 0), r)) {
                                     var i = n && ("load" === n.type ? "missing" : n.type),
                                         a = n && n.target && n.target.src;
-                                    c.message = "Loading chunk " + e + " failed.\n(" + i + ": " + a + ")", c.name = "ChunkLoadError", c.type = i, c.request = a, r[1](c)
+                                    c.message = "Loading chunk " + e + " failed.(" + i + ": " + a + ")", c.name = "ChunkLoadError", c.type = i, c.request = a, r[1](c)
                                 }
                             }), "chunk-" + e, e)
                         }
