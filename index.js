@@ -313,9 +313,10 @@ app.get('/getUser', async (req, res) => {
 
 app.get('/installationCheck', async (req, res) => {
   const domain = req.query.domain;
-
+  const userId = req.query.userId;
+console.log('req.query',req.query)
   // Check if the domain contains a dot
-  if (!domain || !domain.includes('.')) {
+  if (!userId || !domain || !domain.includes('.')) {
     return res
       .status(400)
       .json({ success: false, message: 'Invalid domain format' });
@@ -326,6 +327,7 @@ app.get('/installationCheck', async (req, res) => {
   try {
     const UserId = await ReceivedData.find({
       domain: { $regex: new RegExp(domain, 'i') },
+      userId : userId
     });
 
     console.log('UserId:', UserId);
