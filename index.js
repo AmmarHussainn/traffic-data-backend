@@ -455,11 +455,12 @@ app.post('/audiences', async (req, res) => {
     await audiences.save();
     res
       .status(200)
-      .json({ success: true, message: 'Audience created successfully' });
+      .json({ success: true, message: 'Audience created successfully' , data : audiences });
   } else {
     res.status(200).json({ success: false, message: 'Invalid request' });
   }
 });
+
 app.get('/audiences', async (req, res) => {
   if (req.query.userId) {
     const userId = req.query.userId;
@@ -481,6 +482,51 @@ app.get('/audiences', async (req, res) => {
       .json({ success: false, message: 'UserId Not Available', data: null });
   }
 });
+
+app.delete('/audiences', async (req, res) => {
+    if (req.query.userId && req.query.audienceId) {
+        const userId = req.query.userId;
+        const audienceId = req.query.audienceId;
+        const audiences = await Audiences.findByIdAndDelete(audienceId);
+        if (audiences) {
+        res.status(200).json({
+            success: true,
+            message: 'Audience Deleted successfully',
+        });
+        } else {
+        res
+            .status(200)
+            .json({ success: false, message: 'No Audience Found', data: null });
+        }
+    } else {
+        res
+        .status(200)
+        .json({ success: false, message: 'UserId Not Available', data: null });
+    }
+})
+
+app.patch('/audiences', async (req, res) => {
+    console.log('req.body:', req.body);
+    if (req.body.userId && req.body.audienceId && req.body.filters.length > 0 && req.body.filterName) {
+        const userId = req.body.userId;
+        const audienceId = req.body.audienceId;
+        const audiences = await Audiences.findByIdAndUpdate(audienceId, req.body)
+        console.log('audiences:', audiences);
+        if (audiences) {
+            res.status(200).json({
+                success: true,
+                message: 'Audience Updated successfully',
+                data: audiences
+            });
+
+
+    }}
+    else {
+        res
+        .status(200)
+        .json({ success: false, message: 'UserId Not Available', data: null });
+    }
+})
 app.get('/leadsAvailability', async (req, res) => {
   if (req.query.userId) {
     const userId = req.query.userId;
