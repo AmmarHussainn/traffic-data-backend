@@ -15,6 +15,7 @@ const UserData = require('./Schema/userPersonalDetails');
 const Audiences = require('./Schema/audiences');
 const https = require('https');
 const { log } = require('console');
+const ZapData = require('./Schema/zapschema');
 const mongoURI =
   //  process.env.MONGODB_URI ||
   // 'mongodb+srv://ammarhussain0315:1234@cluster0.um7zey5.mongodb.net/?retryWrites=true&w=majority';
@@ -330,7 +331,7 @@ console.log('req.query',req.query)
       userId : userId
     });
 
-    console.log('UserId:', UserId);
+    // console.log('UserId:', UserId);
 
     if (UserId.length) {
       return res.status(200).json({ success: true, data: UserId });
@@ -527,6 +528,90 @@ app.patch('/audiences', async (req, res) => {
         .json({ success: false, message: 'UserId Not Available', data: null });
     }
 })
+
+
+app.post('/zapiperActivity', async (req, res) => {
+    console.log('req.body:', req.body);   
+    if (!req.body.userId) {
+      return res.status(400).json({ success: false, message: 'Invalid request' });
+    }
+    ZapData.findOne({ ZapName: req.body.zapName })
+
+      .then(existingZapData => {
+        console.log(existingZapData , 'existingZapData');
+        if (existingZapData?._id) {
+            console.log('A user with the same zapName already exists');
+
+          return res.status(400).json({ success: false, message: 'A user with the same zapName already exists' });
+        } else {
+          const activity = new ZapData({
+            ZapName: req.body.zapName,
+           
+            filterName: req.body.filterName,
+            ZapSelectedFields: req.body.ZapSelectedFields,
+            Zapwebhook: req.body.zapierinputValue
+          });
+        
+          return activity.save()
+              .then(() => {
+            res.status(200).json({ success: true, message: 'Activity stored successfully' });
+          })
+        }
+      })
+    //   .then(() => {
+    //     res.status(200).json({ success: true, message: 'Activity stored successfully' });
+    //   })
+    //   .catch(error => {
+    //     console.error("Error saving activity:", error);
+    //     res.status(500).json({ success: false, message: 'Error storing activity' });
+    //   });
+  });
+  
+
+ app.get('/zapiperActivity', async (req, res) => {
+    console.log('req', req);
+    if (req.query.userId) {
+      const userId = req.query.userId;
+      const activity = await ZapData.find({ ZapAudience: userId });
+      if (activity) {
+        res.status(200).json({
+          success: true,
+          message: 'Activity Found successfully',
+          data: activity,
+        });
+      } else {
+        res
+          .status(200)
+          .json({ success: false, message: 'No Activity Found', data: [] });
+      }
+    } else {
+      res
+        .status(200)
+        .json({ success: false, message: 'UserId Not Available', data: null });
+    }
+  }
+ );
+
+app.delete('/zapiperActivity', async (req, res) => {
+    if (req.query.userId && req.query.zapId) {
+        const userId = req.query.userId;
+        const zapId = req.query._id;
+        const activity = await ZapData.findByIdAndDelete(zapId);
+        if (activity) {
+        res.status(200).json({
+            success: true,
+            message: 'Activity Deleted successfully',
+        });
+        }
+        else {
+        res.status(200).json({ success: false, message: 'No Activity Found', data: null });
+        }
+    } 
+}
+);
+
+
+
 app.get('/leadsAvailability', async (req, res) => {
   if (req.query.userId) {
     const userId = req.query.userId;
