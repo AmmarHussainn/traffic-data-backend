@@ -16,6 +16,8 @@ const Audiences = require('./Schema/audiences');
 const https = require('https');
 const { log } = require('console');
 const ZapData = require('./Schema/zapschema');
+const axios = require('axios');
+
 const mongoURI =
   //  process.env.MONGODB_URI ||
   // 'mongodb+srv://ammarhussain0315:1234@cluster0.um7zey5.mongodb.net/?retryWrites=true&w=majority';
@@ -84,61 +86,54 @@ async function enrichPerson(personId, apiKey, maxEmails, hemtype) {
     maxEmails: maxEmails,
     hemType: hemtype,
   });
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      body: body,
-    });
-    if (!response.ok) {
-      throw new Error(
-        `API call failed: ${response.status} - ${response.statusText}`
-      );
-    }
-    const data = await response.json();
-    const md5Emails = data.details.emails.map((email) => email.md5);
-    const filteredData = await getEmailAddresses(md5Emails); // Call getEmailAddresses and await for its completion
-    let email = filteredData[0].Email
-    let flag1 = false;
-    const Emailurl =
-      'https://emailvalidation.abstractapi.com/v1/?api_key=13b15821e59f448c8fea9bfb9083189a&email=' +
-      email;
-    // console.log('1');
-    // httpGetAsync(Emailurl, function (response) {
-    //   const jsonResponse = JSON.parse(response);
-    //   if (jsonResponse?.is_valid_format?.value == true) flag1 = true
-    // });
-    // if (flag1) return filteredData;
-
-    const jsonResponse = await getEmailValidationResponse(email);
-  
-    if (jsonResponse?.is_valid_format?.value == true) {
-      return filteredData;
-    }
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: headers,
+    body: body,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `API call failed: ${response.status} - ${response.statusText}`
+    );
   }
-  
-  function getEmailValidationResponse(email) {
-    const Emailurl =
-      'https://emailvalidation.abstractapi.com/v1/?api_key=13b15821e59f448c8fea9bfb9083189a&email=' +
-      email;
-      
-    return new Promise((resolve, reject) => {
-      httpGetAsync(Emailurl, function (response) {
-        try {
-          const jsonResponse = JSON.parse(response);
-          resolve(jsonResponse);
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
-  
+  const data = await response.json();
+  const md5Emails = data.details.emails.map((email) => email.md5);
+  const filteredData = await getEmailAddresses(md5Emails); // Call getEmailAddresses and await for its completion
+  let email = filteredData[0].Email;
+  let flag1 = false;
+  const Emailurl =
+    'https://emailvalidation.abstractapi.com/v1/?api_key=13b15821e59f448c8fea9bfb9083189a&email=' +
+    email;
+  // console.log('1');
+  // httpGetAsync(Emailurl, function (response) {
+  //   const jsonResponse = JSON.parse(response);
+  //   if (jsonResponse?.is_valid_format?.value == true) flag1 = true
+  // });
+  // if (flag1) return filteredData;
 
+  const jsonResponse = await getEmailValidationResponse(email);
 
-
-
-  
+  if (jsonResponse?.is_valid_format?.value == true) {
+    return filteredData;
+  }
 }
 
+function getEmailValidationResponse(email) {
+  const Emailurl =
+    'https://emailvalidation.abstractapi.com/v1/?api_key=13b15821e59f448c8fea9bfb9083189a&email=' +
+    email;
+
+  return new Promise((resolve, reject) => {
+    httpGetAsync(Emailurl, function (response) {
+      try {
+        const jsonResponse = JSON.parse(response);
+        resolve(jsonResponse);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
 
 async function getEmailAddresses(md5Emails) {
   try {
@@ -315,7 +310,7 @@ app.get('/getUser', async (req, res) => {
 app.get('/installationCheck', async (req, res) => {
   const domain = req.query.domain;
   const userId = req.query.userId;
-console.log('req.query',req.query)
+  console.log('req.query', req.query);
   // Check if the domain contains a dot
   if (!userId || !domain || !domain.includes('.')) {
     return res
@@ -328,7 +323,7 @@ console.log('req.query',req.query)
   try {
     const UserId = await ReceivedData.find({
       domain: { $regex: new RegExp(domain, 'i') },
-      userId : userId
+      userId: userId,
     });
 
     // console.log('UserId:', UserId);
@@ -454,9 +449,11 @@ app.post('/audiences', async (req, res) => {
     const filterName = req.body.filterName;
     const audiences = new Audiences({ userId, filters, filterName });
     await audiences.save();
-    res
-      .status(200)
-      .json({ success: true, message: 'Audience created successfully' , data : audiences });
+    res.status(200).json({
+      success: true,
+      message: 'Audience created successfully',
+      data: audiences,
+    });
   } else {
     res.status(200).json({ success: false, message: 'Invalid request' });
   }
@@ -485,154 +482,211 @@ app.get('/audiences', async (req, res) => {
 });
 
 app.delete('/audiences', async (req, res) => {
-    if (req.query.userId && req.query.audienceId) {
-        const userId = req.query.userId;
-        const audienceId = req.query.audienceId;
-        const audiences = await Audiences.findByIdAndDelete(audienceId);
-        if (audiences) {
-        res.status(200).json({
-            success: true,
-            message: 'Audience Deleted successfully',
-        });
-        } else {
-        res
-            .status(200)
-            .json({ success: false, message: 'No Audience Found', data: null });
-        }
-    } else {
-        res
-        .status(200)
-        .json({ success: false, message: 'UserId Not Available', data: null });
-    }
-})
-
-app.patch('/audiences', async (req, res) => {
-    console.log('req.body:', req.body);
-    if (req.body.userId && req.body.audienceId && req.body.filters.length > 0 && req.body.filterName) {
-        const userId = req.body.userId;
-        const audienceId = req.body.audienceId;
-        const audiences = await Audiences.findByIdAndUpdate(audienceId, req.body)
-        console.log('audiences:', audiences);
-        if (audiences) {
-            res.status(200).json({
-                success: true,
-                message: 'Audience Updated successfully',
-                data: audiences
-            });
-
-
-    }}
-    else {
-        res
-        .status(200)
-        .json({ success: false, message: 'UserId Not Available', data: null });
-    }
-})
-
-
-app.post('/zapiperActivity', async (req, res) => {
-    console.log('req.body:', req.body);   
-    if (!req.body.userId) {
-      return res.status(400).json({ success: false, message: 'Invalid request' });
-    }
-    ZapData.findOne({ ZapName: req.body.zapName })
-
-      .then(existingZapData => {
-        console.log(existingZapData , 'existingZapData');
-        if (existingZapData?._id) {
-            console.log('A user with the same zapName already exists');
-
-          return res.status(400).json({ success: false, message: 'A user with the same zapName already exists' });
-        } else {
-          const activity = new ZapData({
-            ZapName: req.body.zapName,
-           
-            filterName: req.body.filterName,
-            ZapSelectedFields: req.body.ZapSelectedFields,
-            Zapwebhook: req.body.zapierinputValue
-          });
-        
-          return activity.save()
-              .then(() => {
-            res.status(200).json({ success: true, message: 'Activity stored successfully' });
-          })
-        }
-      })
-    //   .then(() => {
-    //     res.status(200).json({ success: true, message: 'Activity stored successfully' });
-    //   })
-    //   .catch(error => {
-    //     console.error("Error saving activity:", error);
-    //     res.status(500).json({ success: false, message: 'Error storing activity' });
-    //   });
-  });
-  
-
- app.get('/zapiperActivity', async (req, res) => {
-    console.log('req', req);
-    if (req.query.userId) {
-      const userId = req.query.userId;
-      const activity = await ZapData.find({ ZapAudience: userId });
-      if (activity) {
-        res.status(200).json({
-          success: true,
-          message: 'Activity Found successfully',
-          data: activity,
-        });
-      } else {
-        res
-          .status(200)
-          .json({ success: false, message: 'No Activity Found', data: [] });
-      }
-    } else {
-      res
-        .status(200)
-        .json({ success: false, message: 'UserId Not Available', data: null });
-    }
-  }
- );
-
-app.delete('/zapiperActivity', async (req, res) => {
-    if (req.query.userId && req.query.zapId) {
-        const userId = req.query.userId;
-        const zapId = req.query._id;
-        const activity = await ZapData.findByIdAndDelete(zapId);
-        if (activity) {
-        res.status(200).json({
-            success: true,
-            message: 'Activity Deleted successfully',
-        });
-        }
-        else {
-        res.status(200).json({ success: false, message: 'No Activity Found', data: null });
-        }
-    } 
-}
-);
-
-
-
-app.get('/leadsAvailability', async (req, res) => {
-  if (req.query.userId) {
+  if (req.query.userId && req.query.audienceId) {
     const userId = req.query.userId;
-    const audiences = await User.findById( userId );
-    console.log('audiences:', audiences);
-    if (audiences && audiences?.subscription?.leads > 0) {
+    const audienceId = req.query.audienceId;
+    const audiences = await Audiences.findByIdAndDelete(audienceId);
+    if (audiences) {
       res.status(200).json({
         success: true,
-        id:"Gluw20BaIF7ocNtwGyZEDHCkRaiE4HX7"
+        message: 'Audience Deleted successfully',
       });
     } else {
       res
         .status(200)
-        .json({ success: false, });
+        .json({ success: false, message: 'No Audience Found', data: null });
     }
   } else {
     res
       .status(200)
-      .json({ success: false, });
+      .json({ success: false, message: 'UserId Not Available', data: null });
   }
 });
+
+app.patch('/audiences', async (req, res) => {
+  console.log('req.body:', req.body);
+  if (
+    req.body.userId &&
+    req.body.audienceId &&
+    req.body.filters.length > 0 &&
+    req.body.filterName
+  ) {
+    const userId = req.body.userId;
+    const audienceId = req.body.audienceId;
+    const audiences = await Audiences.findByIdAndUpdate(audienceId, req.body);
+    console.log('audiences:', audiences);
+    if (audiences) {
+      res.status(200).json({
+        success: true,
+        message: 'Audience Updated successfully',
+        data: audiences,
+      });
+    }
+  } else {
+    res
+      .status(200)
+      .json({ success: false, message: 'UserId Not Available', data: null });
+  }
+});
+
+app.post('/zapiperActivity', async (req, res) => {
+  console.log('req.body:', req.body);
+  if (!req.body.userId) {
+    return res.status(400).json({ success: false, message: 'Invalid request' });
+  }
+  let alredyZapp = await ZapData.findOne({
+    ZapName: req.body.zapName,
+    userId: req.body.userId,
+  });
+  console.log('alredyZapp:', alredyZapp);
+  if (alredyZapp) {
+    console.log('A user with the same zapName already exists');
+    return res.status(400).json({
+      success: false,
+      message: 'A user with the same zapName already exists',
+    });
+  } else {
+    const activity = new ZapData({
+      ZapName: req.body.zapName,
+      userId: req.body.userId,
+      filterName: req.body.filterName,
+      ZapSelectedFields: req.body.ZapSelectedFields,
+      Zapwebhook: req.body.zapierinputValue,
+    });
+    let save = await activity.save();
+    if (save) {
+      res.status(200).json({
+        success: true,
+        message: 'Activity stored successfully',
+        data: save,
+      });
+    }
+  }
+});
+
+app.put('/zapiperActivity', async (req, res) => {
+  console.log('req.body:', req.body);
+  if (!req.body.userId) {
+    return res.status(400).json({ success: false, message: 'Invalid request' });
+  }
+  let alredyZapp = await ZapData.findByIdAndUpdate(
+    req.body._id,
+    {
+      ZapName: req.body.zapName,
+      userId: req.body.userId,
+      filterName: req.body.filterName,
+      ZapSelectedFields: req.body.ZapSelectedFields,
+      Zapwebhook: req.body.zapierinputValue,
+    },
+    { new: true }
+  );
+  console.log('alredyZapp:', alredyZapp);
+  if (alredyZapp) {
+    return res.status(200).json({
+      success: true,
+      message: 'This Zap  is updated successfully ',
+      data: alredyZapp,
+    });
+  } else {
+    console.log('A user with the same zapName already exists');
+    return res.status(400).json({
+      success: false,
+      message: 'This Zap doesnot exist ',
+    });
+  }
+});
+app.get('/zapiperActivity', async (req, res) => {
+  console.log('req', req.query);
+  try {
+    if (req.query.userId) {
+      const userId = req.query.userId;
+      const activities = await ZapData.find({ userId: userId });
+
+      if (activities && activities.length > 0) {
+        return res.status(200).json({
+          success: true,
+          message: 'Activities found successfully',
+          data: activities,
+        });
+      } else {
+        return res.status(200).json({
+          success: false,
+          message: 'No activities found',
+          data: [],
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID not provided',
+        data: null,
+      });
+    }
+  } catch (error) {
+    console.error('Error finding activities:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error finding activities',
+      data: null,
+    });
+  }
+});
+
+app.delete('/zapiperActivity', async (req, res) => {
+    console.log('req.query:sss', req.body);
+  if (req.body.userId && req.body._id) {
+   
+    const zapId = req.body._id;
+    console.log('zapId:', zapId);
+    const activity = await ZapData.findByIdAndDelete(zapId);
+    if (activity) {
+        console.log('delete Successfully:', activity),
+      res.status(200).json({
+        success: true,
+        message: 'Activity Deleted successfully',
+      
+      });
+    } else {
+      res
+        .status(200)
+        .json({ success: false, message: 'No Activity Found', data: null });
+    }
+  }
+});
+
+app.get('/leadsAvailability', async (req, res) => {
+  if (req.query.userId) {
+    const userId = req.query.userId;
+    const audiences = await User.findById(userId);
+    console.log('audiences:', audiences);
+    if (audiences && audiences?.subscription?.leads > 0) {
+      res.status(200).json({
+        success: true,
+        id: 'Gluw20BaIF7ocNtwGyZEDHCkRaiE4HX7',
+      });
+    } else {
+      res.status(200).json({ success: false });
+    }
+  } else {
+    res.status(200).json({ success: false });
+  }
+});
+
+
+ app.post('/hitzappier', async (req, res) => {
+    console.log('req.body:fot zsa', req.body);
+    const { zapierinputValue, data } = req.body;
+
+    try {
+        
+        const response = await axios.post(zapierinputValue, data);
+        console.log('Response from Zapier:', response.data);
+        res.status(200).json({ success: true, message: 'Data sent to Zapier successfully' });
+    } catch (error) {
+        console.error('Error sending data to Zapier:', error);
+        res.status(500).json({ success: false, message: 'Failed to send data to Zapier' });
+    }
+ });
 
 app.get('/testme', async (req, res) => {
   res.send('Hello, World! Zoop');

@@ -5,6 +5,7 @@ const ZapDataSchema = new mongoose.Schema({
     ZapAudience: { type: String },
     ZapSelectedFields: { type: Array },
     Zapwebhook: { type: String },
+    userId: { type: String, required: true },
     filterName : { type: Object },
     _id: {
         type: String,
