@@ -728,12 +728,13 @@ app.get('/pixelCode.js', (req, res) => {
           
           var config = {
             storageKey: "iw_id",
+            liQf: ".6”
           };
           
-          //////****Initialization for FC */
-        //   fc('init', "Gluw20BaIF7ocNtwGyZEDHCkRaiE4HX7", config);
+         
+      
           fc('init', data.id, config);
-          //////****Initialization for FC */
+       
           
       
           
