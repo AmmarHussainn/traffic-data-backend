@@ -728,7 +728,7 @@ app.get('/pixelCode.js', (req, res) => {
           
           var config = {
             storageKey: "iw_id",
-            liQf: ".6”
+            
           };
           
          
