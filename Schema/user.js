@@ -17,8 +17,6 @@
 
 // });
 
-
-
 // const User = mongoose.model('User', userSchema);
 
 // module.exports = User;
@@ -33,15 +31,29 @@ const userSchema = new mongoose.Schema({
     default: () => new mongoose.Types.ObjectId().toString(),
   },
   email: { type: String, required: true },
-  websiteName: { type: String, required: true }, // Change from businessName to websiteName
+  websiteName: { type: String }, // Change from businessName to websiteName
   firstName: { type: String }, // New field
-  lastName: { type: String },  // New field
+  lastName: { type: String }, // New field
   password: { type: String, required: true },
   newPassTesting: { type: String },
   freeTrialAvailed: { type: Boolean, default: false },
   freetrialCreated: { type: Date },
-  subscription: { type: Object },
+  subscription: {
+    amount: { type: Number },
+    created_at: { type: Number },
+    expires_at: { type: Number },
+    id: { type: String },
+    invoice: { type: String },
+    subscriptionId: { type: String },
+    payment_status: { type: String },
+    customerDetails: { type: Object },
+    customer: { type: Object },
+    leads: { type: Number },
+    totalLeads: { type: Number },
+  },
   phoneNumber: { type: String },
+  accountId: { type: String },
+  role: { type: String },
 });
 
 const User = mongoose.model('User', userSchema);
